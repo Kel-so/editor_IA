@@ -32,11 +32,28 @@ FONT_CACHE = {}
 def get_font(size=140):
     if size in FONT_CACHE:
         return FONT_CACHE[size]
-    font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Black.ttf"
+        
+    # 1. Força bruta: tenta roubar fontes nativas do servidor Linux (Streamlit Cloud)
+    system_fonts = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
+        "arial.ttf" # Fallback caso você rode no Windows localmente
+    ]
+    
+    for font_path in system_fonts:
+        if os.path.exists(font_path):
+            try:
+                font = ImageFont.truetype(font_path, size)
+                FONT_CACHE[size] = font
+                return font
+            except:
+                continue
+                
+    # 2. Plano B: CDN de alta disponibilidade (Roboto Black)
     try:
-        r = requests.get(font_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
-        r.raise_for_status()
-        # MÁGICA: Carrega a fonte direto na memória RAM, sem tocar no HD!
+        font_url = "https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Black.ttf"
+        r = requests.get(font_url, timeout=10)
         font = ImageFont.truetype(BytesIO(r.content), size)
         FONT_CACHE[size] = font
         return font
