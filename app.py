@@ -47,14 +47,19 @@ def create_text_overlay(text):
     try:
         # multiline_textbbox entende as quebras de linha (\n)
         bbox = temp_draw.multiline_textbbox((0, 0), text, font=font, align="center")
-        text_w = bbox[2] - bbox[0]
-        text_h = bbox[3] - bbox[1]
+        text_w = int(bbox[2] - bbox[0]) # Força número inteiro pra não dar crash de "meio pixel"
+        text_h = int(bbox[3] - bbox[1])
     except:
         text_w, text_h = 600, 200
         
     # Lona exata do texto + respiro gigante pra sombra suave
     padding = 40
-    img = Image.new('RGBA', (text_w + padding*2, text_h + padding*2), (0, 0, 0, 0))
+    
+    # Trava de segurança: garante que largura e altura sejam inteiros > 0
+    final_width = max(10, int(text_w) + padding * 2)
+    final_height = max(10, int(text_h) + padding * 2)
+    
+    img = Image.new('RGBA', (final_width, final_height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
     # 1. SOFT DROP SHADOW (Gambiarra premium iterativa)
