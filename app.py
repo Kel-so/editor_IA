@@ -29,7 +29,7 @@ def ease_out_cubic(t, duration=0.8):
 
 # Cache da fonte na RAM para evitar bloqueios de disco do servidor
 FONT_CACHE = {}
-def get_font(size=140):
+def get_font(size=70):
     if size in FONT_CACHE:
         return FONT_CACHE[size]
         
@@ -63,7 +63,7 @@ def get_font(size=140):
 
 # --- TEXTO PREMIUM (ALINHADO À ESQUERDA, MULTILINHA + SOFT SHADOW) ---
 def create_text_overlay(text):
-    font = get_font(140) # Pega a fonte colossal da memória
+    font = get_font(70) # Tamanho reajustado pra não gritar na cara de quem tá assistindo
     
     temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
     temp_draw = ImageDraw.Draw(temp_img)
