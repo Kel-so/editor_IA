@@ -27,27 +27,27 @@ def ease_out_cubic(t, duration=0.8):
     p = min(1.0, t / duration)
     return 1 - pow(1 - p, 3)
 
+# Cache da fonte na RAM para evitar bloqueios de disco do servidor
+FONT_CACHE = {}
+def get_font(size=140):
+    if size in FONT_CACHE:
+        return FONT_CACHE[size]
+    font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Black.ttf"
+    try:
+        r = requests.get(font_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
+        r.raise_for_status()
+        # MÁGICA: Carrega a fonte direto na memória RAM, sem tocar no HD!
+        font = ImageFont.truetype(BytesIO(r.content), size)
+        FONT_CACHE[size] = font
+        return font
+    except Exception as e:
+        print(f"Erro brutal ao carregar fonte: {e}")
+        return ImageFont.load_default()
+
 # --- TEXTO PREMIUM (ALINHADO À ESQUERDA, MULTILINHA + SOFT SHADOW) ---
 def create_text_overlay(text):
-    # Link bruto corrigido pra não baixar HTML por engano e quebrar a fonte
-    font_path = "temp_files/Montserrat-Black.ttf"
-    try:
-        # Se o arquivo não existir ou tiver menos de 10KB (sinal de que baixou erro 404)
-        if not os.path.exists(font_path) or os.path.getsize(font_path) < 10000:
-            font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Black.ttf"
-            headers = {'User-Agent': 'Mozilla/5.0'} # Finge que é navegador pra não ser bloqueado
-            r = requests.get(font_url, headers=headers)
-            r.raise_for_status()
-            with open(font_path, "wb") as f:
-                f.write(r.content)
-        
-        # Aumentei de 100 pra 130! Cavalo!
-        font = ImageFont.truetype(font_path, 130)
-    except Exception as e:
-        # Se der erro agora a gente vai saber nos logs
-        print(f"Erro ao carregar fonte premium: {e}")
-        font = ImageFont.load_default()
-        
+    font = get_font(140) # Pega a fonte colossal da memória
+    
     temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
     temp_draw = ImageDraw.Draw(temp_img)
     try:
@@ -59,7 +59,7 @@ def create_text_overlay(text):
         text_w, text_h = 800, 300
         
     # Aumentei o respiro pra sombra esfumaçada não ser cortada nas bordas
-    padding = 80
+    padding = 100
     
     final_width = max(10, int(text_w) + padding * 2)
     final_height = max(10, int(text_h) + padding * 2)
@@ -73,10 +73,11 @@ def create_text_overlay(text):
     # Desenha o texto preto deslocado um pouco pra direita e pra baixo
     shadow_draw.multiline_text((padding + 10, padding + 15), text, font=font, fill=(0, 0, 0, 255), align="left")
     
-    # Desfoca sem dó (raio de 15px)
-    shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=15))
+    # Desfoca sem dó (raio de 25px para ficar beeeem difusa e cinemática)
+    shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=25))
     
-    # Cola a sombra na imagem original. Colamos 2x pra ficar com um miolo bem escuro e borda suave.
+    # Cola a sombra na imagem original (3x para dar bastante preenchimento no escuro)
+    img.alpha_composite(shadow_layer)
     img.alpha_composite(shadow_layer)
     img.alpha_composite(shadow_layer)
     
