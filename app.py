@@ -1,14 +1,12 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import json
 import os
 import shutil
 import asyncio
 import edge_tts
-import requests
-import numpy as np
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
-from moviepy.editor import ColorClip, AudioFileClip, CompositeVideoClip, ImageClip, concatenate_videoclips
+import base64
+from moviepy.editor import AudioFileClip, concatenate_audioclips
 
 # --- SETUP E LIMPEZA ---
 def cleanup_temp():
@@ -21,183 +19,245 @@ async def gen_audio(text, filepath):
     tts = edge_tts.Communicate(text, "pt-BR-AntonioNeural")
     await tts.save(filepath)
 
-# --- FUNÇÃO DE EASING (Para o movimento ficar fluido estilo After Effects) ---
-def ease_out_cubic(t, duration=0.8):
-    p = min(1.0, t / duration)
-    return 1 - pow(1 - p, 3)
-
-# Cache da fonte na RAM para evitar bloqueios de disco do servidor
-FONT_CACHE = {}
-def get_font(size=50): # Tamanho reduzido de 70 para 50
-    if size in FONT_CACHE:
-        return FONT_CACHE[size]
-        
-    system_fonts = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-        "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
-        "arial.ttf"
-    ]
-    
-    for font_path in system_fonts:
-        if os.path.exists(font_path):
-            try:
-                font = ImageFont.truetype(font_path, size)
-                FONT_CACHE[size] = font
-                return font
-            except:
-                continue
-                
-    try:
-        font_url = "https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Black.ttf"
-        r = requests.get(font_url, timeout=10)
-        font = ImageFont.truetype(BytesIO(r.content), size)
-        FONT_CACHE[size] = font
-        return font
-    except Exception as e:
-        print(f"Erro brutal ao carregar fonte: {e}")
-        return ImageFont.load_default()
-
-# --- TEXTO PREMIUM (ALINHADO À ESQUERDA, MULTILINHA + SOFT SHADOW) ---
-def create_text_overlay(text):
-    font = get_font(50) # Texto menorzinho, elegante
-    
-    temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
-    temp_draw = ImageDraw.Draw(temp_img)
-    try:
-        bbox = temp_draw.multiline_textbbox((0, 0), text, font=font, align="left")
-        text_w = int(bbox[2] - bbox[0])
-        text_h = int(bbox[3] - bbox[1])
-    except:
-        text_w, text_h = 800, 300
-        
-    padding = 100
-    
-    final_width = max(10, int(text_w) + padding * 2)
-    final_height = max(10, int(text_h) + padding * 2)
-    
-    img = Image.new('RGBA', (final_width, final_height), (0, 0, 0, 0))
-    
-    # 1. SOMBRA DIFUSA PROFISSIONAL (Gaussian Blur)
-    shadow_layer = Image.new('RGBA', (final_width, final_height), (0, 0, 0, 0))
-    shadow_draw = ImageDraw.Draw(shadow_layer)
-    
-    shadow_draw.multiline_text((padding + 10, padding + 15), text, font=font, fill=(0, 0, 0, 255), align="left")
-    shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=25))
-    
-    img.alpha_composite(shadow_layer)
-    img.alpha_composite(shadow_layer)
-    img.alpha_composite(shadow_layer)
-    
-    # 2. Texto Principal Branco
-    draw = ImageDraw.Draw(img)
-    draw.multiline_text((padding, padding), text, font=font, fill="white", align="left")
-    
-    return np.array(img)
-
-# --- CARREGAR IMAGENS ---
-def load_overlay_image(url):
-    if not url: return None
-    try:
-        resp = requests.get(url)
-        img = Image.open(BytesIO(resp.content)).convert("RGBA")
-        resample_filter = getattr(Image.Resampling, 'LANCZOS', Image.ANTIALIAS)
-        img.thumbnail((150, 150), resample_filter)
-        return np.array(img)
-    except Exception:
-        return None
-
-
 # --- UI STREAMLIT ---
-st.set_page_config(page_title="Gerador Wan 2.1", layout="wide")
-st.title("🎬 Ilha de Edição IA - Modo Raiz")
-st.markdown("Cole o seu JSON abaixo. Texto menor e grudado na esquerda.")
+st.set_page_config(page_title="Gerador WebMotion", layout="wide")
+st.title("⚡ Ilha de Edição HTML5 - Modo Express")
+st.markdown("Chega de renderizar vídeo. O navegador faz o trabalho sujo e em tempo real.")
 
-with st.sidebar:
-    st.header("Configurações")
-    api_key = st.text_input("SiliconFlow API Key", type="password", help="Vazio = Simulação com fundos coloridos")
+json_input = st.text_area("Cole seu Roteiro JSON:", height=300, placeholder='{\n  "scenes": [\n    ...\n  ]\n}')
 
-# Área limpa só pro JSON
-json_input = st.text_area("Roteiro JSON:", height=400, placeholder='{\n  "scenes": [\n    ...\n  ]\n}')
-
-st.divider()
-
-# --- MOTOR DE RENDERIZAÇÃO ---
-if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width=True):
+if st.button("🚀 Gerar Apresentação Animada", type="primary", use_container_width=True):
     if not json_input.strip():
-        st.warning("Eita, esqueceu de colar o JSON aí, mestre!")
+        st.warning("Cadê o JSON, mestre?")
         st.stop()
         
     try:
         roteiro = json.loads(json_input)
-        if "scenes" not in roteiro:
-            st.error("JSON inválido: Faltou a chave 'scenes'.")
-            st.stop()
     except Exception as e:
-        st.error(f"Erro de sintaxe no JSON. Dá uma revisada: {e}")
+        st.error(f"Erro no JSON: {e}")
         st.stop()
 
     cleanup_temp()
-    st.info("Renderizando frame a frame com animações fluidas...")
+    st.info("Gerando vozes e calculando tempos milimétricos...")
     
-    clips_finais = []
+    audio_clips = []
+    durations_ms = []
+    slides_html = ""
+    
     progress_bar = st.progress(0)
     total_scenes = len(roteiro["scenes"])
     
+    # 1. PROCESSA ÁUDIO E GERA SLIDES HTML DINAMICAMENTE
     for idx, cena in enumerate(roteiro["scenes"]):
-        st.write(f"⚙️ Processando cena {idx+1}...")
+        st.write(f"🎙️ Gravando cena {idx+1}...")
         
+        # Gera e mede o áudio
         audio_path = f"temp_files/audio_{idx}.mp3"
         asyncio.run(gen_audio(cena["text"], audio_path))
-        audio_clip = AudioFileClip(audio_path)
-        duration = audio_clip.duration
+        clip = AudioFileClip(audio_path)
+        audio_clips.append(clip)
         
-        # Define fallback caso falte a chave 'type'
-        cena_type = cena.get("type", "worker")
+        dur_ms = int(clip.duration * 1000)
+        durations_ms.append(dur_ms)
         
-        if not api_key:
-            color = (20, 60, 120) if cena_type == "worker" else (120, 40, 40)
-            base_clip = ColorClip(size=(1280, 720), color=color, duration=duration)
-        else:
-            base_clip = ColorClip(size=(1280, 720), color=(30, 80, 40), duration=duration)
-            
-        base_clip = base_clip.set_audio(audio_clip)
-        layers = [base_clip]
+        # Formata o texto para o HTML (Quebras de linha viram <br>)
+        title = cena.get("overlay_text", f"CENA {idx+1}").replace("\n", "<br>")
+        text = cena.get("text", "")
         
-        if cena.get("overlay_image_url"):
-            img_array = load_overlay_image(cena["overlay_image_url"])
-            if img_array is not None:
-                logo_clip = (ImageClip(img_array)
-                             .set_duration(duration)
-                             .set_position(("right", "top"))
-                             .margin(top=30, right=30, opacity=0)
-                             .crossfadein(0.8))
-                layers.append(logo_clip)
-        
-        if cena.get("overlay_text"):
-            txt_array = create_text_overlay(cena["overlay_text"])
-            txt_h = txt_array.shape[0]
-            
-            target_y = (720 - txt_h) // 2
-            start_y = target_y + 120
-            
-            # Posição X colada na esquerda (50px) ao invés de 100px
-            txt_clip = (ImageClip(txt_array)
-                        .set_duration(duration)
-                        .crossfadein(0.8)
-                        .set_position(lambda t, sy=start_y, ty=target_y: (50, int(sy - (sy - ty) * ease_out_cubic(t)))))
-            
-            layers.append(txt_clip)
-            
-        cena_composita = CompositeVideoClip(layers, size=(1280, 720))
-        clips_finais.append(cena_composita)
-        
+        # Monta o bloquinho do Slide
+        active_class = "active" if idx == 0 else ""
+        slides_html += f"""
+        <div class="slide {active_class} flex-col items-center text-center" data-duration="{dur_ms}">
+            <h2 class="text-5xl md:text-6xl font-black mb-8 uppercase text-white drop-shadow-[0_5px_15px_rgba(0,0,0,0.8)] leading-tight">{title}</h2>
+            <div class="glass-card p-6 md:p-8 rounded-3xl w-full max-w-3xl border-l-4 border-l-yellow-400">
+                <p class="text-xl md:text-2xl text-slate-200 font-light leading-relaxed">{text}</p>
+            </div>
+        </div>
+        """
         progress_bar.progress((idx + 1) / total_scenes)
 
-    st.write("✂️ Unificando blocos e exportando...")
-    video_final = concatenate_videoclips(clips_finais, method="compose")
-    output_path = "temp_files/video_final.mp4"
-    video_final.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac", logger=None)
+    st.write("🔧 Compilando o Player Web...")
     
-    st.success("✅ Tá no ar! Aperta o play pra ver a obra.")
-    st.video(output_path)
+    # 2. CONCATENA O ÁUDIO E CONVERTE PRA BASE64
+    final_audio = concatenate_audioclips(audio_clips)
+    final_audio_path = "temp_files/final_audio.mp3"
+    final_audio.write_audiofile(final_audio_path, logger=None)
+    
+    with open(final_audio_path, "rb") as f:
+        audio_b64 = base64.b64encode(f.read()).decode('utf-8')
+    
+    # 3. MONTA O HTML FINAL MESTRE
+    html_template = f"""
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+        <style>
+            body {{
+                font-family: 'Montserrat', sans-serif;
+                background-color: #0f172a;
+                background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+                color: white;
+                overflow: hidden;
+                margin: 0;
+                height: 100vh;
+            }}
+            .slide {{
+                display: none;
+                animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                width: 100%;
+                justify-content: center;
+            }}
+            .slide.active {{ display: flex; }}
+            @keyframes slideIn {{
+                from {{ opacity: 0; transform: translateY(40px); }}
+                to {{ opacity: 1; transform: translateY(0); }}
+            }}
+            @keyframes slideOut {{
+                from {{ opacity: 1; transform: translateY(0); }}
+                to {{ opacity: 0; transform: translateY(-40px); }}
+            }}
+            .progress-segment {{
+                height: 6px;
+                background: rgba(255, 255, 255, 0.1);
+                flex: 1;
+                margin: 0 4px;
+                border-radius: 3px;
+                overflow: hidden;
+                position: relative;
+            }}
+            .progress-fill {{
+                height: 100%;
+                background: #facc15;
+                width: 0%;
+            }}
+            .glass-card {{
+                background: rgba(255, 255, 255, 0.05);
+                backdrop-filter: blur(10px);
+                border: 1px rgba(255, 255, 255, 0.1) solid;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            }}
+            #start-overlay {{
+                position: absolute; inset: 0; z-index: 50;
+                background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(5px);
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+            }}
+        </style>
+    </head>
+    <body class="flex flex-col items-center justify-center relative">
+        
+        <!-- Bloqueio de Autoplay (Navegadores exigem clique pra tocar áudio) -->
+        <div id="start-overlay">
+            <h1 class="text-4xl font-black mb-6 uppercase tracking-widest text-yellow-400">Pronto para rodar</h1>
+            <button id="start-btn" class="px-8 py-4 bg-white text-slate-900 font-black rounded-full hover:bg-yellow-400 transition-all transform hover:scale-105 text-xl">
+                ▶ INICIAR APRESENTAÇÃO
+            </button>
+        </div>
+
+        <audio id="narration" src="data:audio/mp3;base64,{audio_b64}"></audio>
+
+        <div id="presentation-container" class="relative w-full max-w-5xl h-[600px] flex items-center justify-center px-6">
+            {slides_html}
+        </div>
+
+        <div class="fixed bottom-8 left-0 right-0 px-8 max-w-5xl mx-auto w-full">
+            <div class="flex gap-2 w-full" id="progress-container"></div>
+            <div class="mt-4 flex justify-between items-center text-sm font-bold text-slate-400 uppercase tracking-widest">
+                <span>⚡ Apresentação Dinâmica</span>
+                <span id="timer-display">00:00</span>
+            </div>
+        </div>
+
+        <script>
+            const audio = document.getElementById('narration');
+            const startBtn = document.getElementById('start-btn');
+            const overlay = document.getElementById('start-overlay');
+            const slides = document.querySelectorAll('.slide');
+            const progressContainer = document.getElementById('progress-container');
+            const timerDisplay = document.getElementById('timer-display');
+            
+            let currentSlide = 0;
+            const slideDurations = Array.from(slides).map(s => parseInt(s.dataset.duration));
+            const totalDuration = slideDurations.reduce((a, b) => a + b, 0);
+            
+            // Cria barras de progresso
+            slides.forEach((_, i) => {{
+                const segment = document.createElement('div');
+                segment.className = 'progress-segment';
+                const fill = document.createElement('div');
+                fill.className = 'progress-fill';
+                fill.id = `fill-${{i}}`;
+                segment.appendChild(fill);
+                progressContainer.appendChild(segment);
+            }});
+
+            startBtn.addEventListener('click', () => {{
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+                audio.play();
+                requestAnimationFrame(update);
+            }});
+
+            function update() {{
+                // SINCRONIA MAGISTRA: O tempo agora vem do áudio, não do relógio do PC!
+                const elapsed = audio.currentTime * 1000; 
+                
+                const secs = Math.floor(elapsed / 1000);
+                const ms = Math.floor((elapsed % 1000) / 10);
+                timerDisplay.textContent = `${{secs.toString().padStart(2, '0')}}:${{ms.toString().padStart(2, '0')}}`;
+
+                let accumulatedTime = 0;
+                let targetSlide = 0;
+
+                for(let i = 0; i < slideDurations.length; i++) {{
+                    const slideStart = accumulatedTime;
+                    const slideEnd = accumulatedTime + slideDurations[i];
+                    
+                    const fillElement = document.getElementById(`fill-${{i}}`);
+                    if (elapsed >= slideEnd) {{
+                        fillElement.style.width = '100%';
+                    }} else if (elapsed >= slideStart) {{
+                        const slideProgress = ((elapsed - slideStart) / slideDurations[i]) * 100;
+                        fillElement.style.width = `${{slideProgress}}%`;
+                        targetSlide = i;
+                    }} else {{
+                        fillElement.style.width = '0%';
+                    }}
+                    accumulatedTime = slideEnd;
+                }}
+
+                if (targetSlide !== currentSlide && targetSlide < slides.length) {{
+                    changeSlide(targetSlide);
+                }}
+
+                if (!audio.ended) {{
+                    requestAnimationFrame(update);
+                }}
+            }}
+
+            function changeSlide(index) {{
+                slides[currentSlide].classList.remove('active');
+                slides[currentSlide].style.animation = 'slideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+                
+                const oldIndex = currentSlide;
+                currentSlide = index;
+                
+                setTimeout(() => {{
+                    slides[oldIndex].style.display = 'none';
+                    slides[currentSlide].style.display = 'flex';
+                    slides[currentSlide].style.animation = 'slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+                    slides[currentSlide].classList.add('active');
+                }}, 400);
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    
+    st.success("✅ Player compilado com sucesso!")
+    
+    # Roda o HTML inteiro dentro do Streamlit, simulando uma tela de 800px de altura
+    components.html(html_template, height=800, scrolling=False)
