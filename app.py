@@ -6,8 +6,9 @@ import asyncio
 import requests
 import shutil
 import edge_tts
-# Importando as ferramentas avançadas de composição do MoviePy
-from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips, ColorClip, TextClip, ImageClip, CompositeVideoClip
+from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips, ColorClip, ImageSequenceClip
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
 async def generate_audio_async(text, voice, output_path):
     communicate = edge_tts.Communicate(text, voice)
@@ -105,10 +106,80 @@ def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
         st.error(f"Erro na comunicação com a API: {e}")
         return False
 
+# Função ninja para desenhar overlays usando PIL (bypassa o ImageMagick)
+def add_overlay_to_frame(frame, texto, img_path):
+    # Converte o frame do MoviePy (numpy array) para uma Imagem PIL
+    pil_img = Image.fromarray(frame)
+    width, height = pil_img.size
+    
+    # 1. Adicionar Imagem
+    if img_path and os.path.exists(img_path):
+        try:
+            overlay_img = Image.open(img_path).convert("RGBA")
+            # Redimensiona (usando a constante moderna ou um fallback seguro)
+            try:
+                resample_filter = Image.Resampling.LANCZOS
+            except AttributeError:
+                resample_filter = Image.LANCZOS # Fallback para Pillow mais antigo
+                
+            nova_altura = 150
+            proporcao = nova_altura / float(overlay_img.size[1])
+            nova_largura = int((float(overlay_img.size[0]) * float(proporcao)))
+            overlay_img = overlay_img.resize((nova_largura, nova_altura), resample_filter)
+            
+            # Posição (Canto superior direito)
+            x_pos = width - nova_largura - 30
+            y_pos = 30
+            
+            # Cola a imagem sobre o frame usando alpha channel para transparência
+            pil_img.paste(overlay_img, (x_pos, y_pos), overlay_img)
+        except Exception as e:
+            pass # Silencia erros de imagem frame a frame
+            
+    # 2. Adicionar Texto
+    if texto:
+        draw = ImageDraw.Draw(pil_img)
+        # Tenta carregar uma fonte do sistema, se falhar, usa a fonte default (pequena, mas funciona sem crashar)
+        try:
+            # Em servidores linux, costuma ter DejaVu
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
+        except IOError:
+             try:
+                 # Fallback windows
+                 font = ImageFont.truetype("arial.ttf", 60)
+             except:
+                 font = ImageFont.load_default()
+        
+        # Pega o tamanho do texto para centralizar
+        try:
+             bbox = font.getbbox(texto)
+             text_width = bbox[2] - bbox[0]
+             text_height = bbox[3] - bbox[1]
+        except AttributeError:
+             # Fallback para Pillow antigasso (getsize)
+             text_width, text_height = draw.textsize(texto, font=font)
+             
+        # Posição (Centralizado, na parte inferior)
+        x_text = (width - text_width) / 2
+        y_text = height * 0.8
+        
+        # Desenha Borda (Stroke manual simulado)
+        stroke_color = "black"
+        stroke_width = 2
+        for offset_x in range(-stroke_width, stroke_width+1):
+            for offset_y in range(-stroke_width, stroke_width+1):
+                 draw.text((x_text + offset_x, y_text + offset_y), texto, font=font, fill=stroke_color)
+                 
+        # Desenha Texto principal
+        draw.text((x_text, y_text), texto, font=font, fill="white")
+
+    # Retorna o frame alterado como numpy array para o MoviePy
+    return np.array(pil_img)
+
 st.set_page_config(page_title="Auto-Studio IA", page_icon="🎬", layout="wide")
 
 st.title("🎬 Orquestrador de Vídeo 100% IA + Camadas")
-st.markdown("Agora com suporte a **Textos** e **Imagens** sobrepostas em cada cena!")
+st.markdown("Agora com suporte a **Textos** e **Imagens** sobrepostas (Renderização Nativa PIL)!")
 
 with st.sidebar:
     st.header("⚙️ Configurações")
@@ -180,7 +251,7 @@ if st.button("🚀 Gerar Vídeo Final", use_container_width=True, type="primary"
                 clip_audio.close()
                 st.stop()
             
-            st.write("✂️ Aplicando Camadas e Sincronizando...")
+            st.write("✂️ Processando Frames e Renderizando Camadas...")
             clip_video = VideoFileClip(video_path)
             
             # Loop ou Corte para bater com o áudio
@@ -189,46 +260,24 @@ if st.button("🚀 Gerar Vídeo Final", use_container_width=True, type="primary"
             else:
                 clip_video = clip_video.subclip(0, duracao_audio)
                 
-            clip_base = clip_video.set_audio(clip_audio)
+            texto_overlay = cena.get("overlay_text", None)
+            img_url = cena.get("overlay_image_url", None)
             
-            # Lista de camadas que vão ser empilhadas
-            camadas = [clip_base]
-            
-            # 1. Aplicar Imagem (se houver)
-            if "overlay_image_url" in cena and cena["overlay_image_url"]:
-                st.write("🖼️ Adicionando imagem sobreposta...")
-                try:
-                    img_path = os.path.join(pasta_temp, f"img_{cena['id']}.png")
-                    img_data = requests.get(cena["overlay_image_url"]).content
-                    with open(img_path, 'wb') as f:
-                        f.write(img_data)
-                    
-                    # Cria o clipe de imagem, define altura para 150px, coloca no canto superior direito
-                    img_clip = ImageClip(img_path).set_duration(duracao_audio)
-                    img_clip = img_clip.resize(height=150) 
-                    img_clip = img_clip.set_position(("right", "top")).margin(right=30, top=30, opacity=0)
-                    camadas.append(img_clip)
-                except Exception as e:
-                    st.warning(f"Não foi possível aplicar a imagem da cena {cena['id']}: {e}")
+            img_path = None
+            if img_url:
+                 img_path = os.path.join(pasta_temp, f"img_{cena['id']}.png")
+                 try:
+                     img_data = requests.get(img_url).content
+                     with open(img_path, 'wb') as f:
+                         f.write(img_data)
+                 except:
+                     img_path = None # Falhou download, segue o baile sem imagem
 
-            # 2. Aplicar Texto (se houver)
-            if "overlay_text" in cena and cena["overlay_text"]:
-                st.write("✍️ Adicionando texto na tela...")
-                try:
-                    # Cria o texto, cor branca com borda preta
-                    txt_clip = TextClip(cena["overlay_text"], fontsize=60, color='white', stroke_color='black', stroke_width=2.5)
-                    # Coloca no centro, perto do fundo
-                    txt_clip = txt_clip.set_position(('center', 0.8), relative=True).set_duration(duracao_audio)
-                    camadas.append(txt_clip)
-                except Exception as e:
-                    st.warning(f"Ocorreu um erro ao renderizar o texto. Certifique-se de que o ImageMagick está instalado no servidor. Erro: {e}")
-
-            # Empilha tudo (se houver mais de uma camada)
-            if len(camadas) > 1:
-                clip_final = CompositeVideoClip(camadas)
-            else:
-                clip_final = clip_base
-
+            # Aplica o filtro customizado frame a frame SE houver texto ou imagem
+            if texto_overlay or img_path:
+                clip_video = clip_video.fl_image(lambda frame: add_overlay_to_frame(frame, texto_overlay, img_path))
+                
+            clip_final = clip_video.set_audio(clip_audio)
             video_clips.append(clip_final)
             
             barra_progresso.progress((idx + 1) / total_cenas)
