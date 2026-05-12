@@ -23,22 +23,20 @@ async def gen_audio(text, filepath):
 
 # --- FUNÇÃO DE EASING (Para o movimento ficar fluido estilo After Effects) ---
 def ease_out_cubic(t, duration=0.8):
-    # Vai de 0 a 1 de forma suave, desacelerando no final
     p = min(1.0, t / duration)
     return 1 - pow(1 - p, 3)
 
 # Cache da fonte na RAM para evitar bloqueios de disco do servidor
 FONT_CACHE = {}
-def get_font(size=70):
+def get_font(size=50): # Tamanho reduzido de 70 para 50
     if size in FONT_CACHE:
         return FONT_CACHE[size]
         
-    # 1. Força bruta: tenta roubar fontes nativas do servidor Linux (Streamlit Cloud)
     system_fonts = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
-        "arial.ttf" # Fallback caso você rode no Windows localmente
+        "arial.ttf"
     ]
     
     for font_path in system_fonts:
@@ -50,7 +48,6 @@ def get_font(size=70):
             except:
                 continue
                 
-    # 2. Plano B: CDN de alta disponibilidade (Roboto Black)
     try:
         font_url = "https://cdn.jsdelivr.net/gh/googlefonts/roboto@main/src/hinted/Roboto-Black.ttf"
         r = requests.get(font_url, timeout=10)
@@ -63,19 +60,17 @@ def get_font(size=70):
 
 # --- TEXTO PREMIUM (ALINHADO À ESQUERDA, MULTILINHA + SOFT SHADOW) ---
 def create_text_overlay(text):
-    font = get_font(70) # Tamanho reajustado pra não gritar na cara de quem tá assistindo
+    font = get_font(50) # Texto menorzinho, elegante
     
     temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
     temp_draw = ImageDraw.Draw(temp_img)
     try:
-        # Mudamos o alinhamento para a ESQUERDA
         bbox = temp_draw.multiline_textbbox((0, 0), text, font=font, align="left")
         text_w = int(bbox[2] - bbox[0])
         text_h = int(bbox[3] - bbox[1])
     except:
         text_w, text_h = 800, 300
         
-    # Aumentei o respiro pra sombra esfumaçada não ser cortada nas bordas
     padding = 100
     
     final_width = max(10, int(text_w) + padding * 2)
@@ -87,18 +82,14 @@ def create_text_overlay(text):
     shadow_layer = Image.new('RGBA', (final_width, final_height), (0, 0, 0, 0))
     shadow_draw = ImageDraw.Draw(shadow_layer)
     
-    # Desenha o texto preto deslocado um pouco pra direita e pra baixo
     shadow_draw.multiline_text((padding + 10, padding + 15), text, font=font, fill=(0, 0, 0, 255), align="left")
-    
-    # Desfoca sem dó (raio de 25px para ficar beeeem difusa e cinemática)
     shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=25))
     
-    # Cola a sombra na imagem original (3x para dar bastante preenchimento no escuro)
     img.alpha_composite(shadow_layer)
     img.alpha_composite(shadow_layer)
     img.alpha_composite(shadow_layer)
     
-    # 2. Texto Principal Branco (Alinhado à esquerda)
+    # 2. Texto Principal Branco
     draw = ImageDraw.Draw(img)
     draw.multiline_text((padding, padding), text, font=font, fill="white", align="left")
     
@@ -116,86 +107,34 @@ def load_overlay_image(url):
     except Exception:
         return None
 
-# --- DADOS PADRÃO (SAGA DO PENTACAMPEONATO) ---
-# Dica de amigo: evite emojis como troféus. O Pillow não suporta fontes coloridas de emoji.
-default_scenes = [
-    {
-      "type": "worker",
-      "text": "O mundo conheceu a magia em 58. Na Suécia, a camisa amarela tornou-se lendária.",
-      "visual_prompt": "Cinematic archival style, 1958 vintage aesthetic, young Pelé crying and hugging teammates, film grain, highly detailed, 4k",
-      "overlay_text": "1958: A PRIMEIRA ESTRELA\n- Sede: Suécia\n- Destaque: Pelé (17 anos)\n- Gols na final: Pelé (2), Vavá (2), Zagallo",
-      "overlay_image_url": ""
-    },
-    {
-      "type": "motion",
-      "text": "Quatro anos depois, o bicampeonato chegou com a força de Mané Garrincha.",
-      "visual_prompt": "Dynamic abstract motion graphics, golden stars flying through a dark stadium, epic lighting, unreal engine 5 render",
-      "overlay_text": "1962: O BICAMPEONATO\n- Sede: Chile\n- Herói: Garrincha\n- Final: Brasil 3 x 1 Tchecoslováquia",
-      "overlay_image_url": ""
-    },
-    {
-      "type": "worker",
-      "text": "A melhor seleção de todos os tempos. O tri no México consagrou o futebol arte.",
-      "visual_prompt": "Cinematic shot, 1970 iconic yellow jersey, intense sun, players celebrating with the Jules Rimet trophy, hyperrealistic, 8k",
-      "overlay_text": "1970: O TRI\n- Sede: México\n- O Esquadrão de Ouro\n- Capitão: Carlos Alberto Torres",
-      "overlay_image_url": ""
-    },
-    {
-      "type": "motion",
-      "text": "Após um jejum agoniante, o grito de É Tetra ecoou pelos Estados Unidos.",
-      "visual_prompt": "Modern glitch motion graphics, golden trophy forming from digital particles, dramatic blue and yellow lighting, 3d animation",
-      "overlay_text": "1994: É TETRA!\n- Sede: EUA\n- Dupla: Romário & Bebeto\n- Decisão nos pênaltis",
-      "overlay_image_url": ""
-    },
-    {
-      "type": "worker",
-      "text": "E na Ásia, a redenção do Fenômeno trouxe o tão sonhado Pentacampeonato. O Brasil no topo do mundo.",
-      "visual_prompt": "Epic celebration, Ronaldo Fenômeno smiling with the World Cup trophy, confetti falling in Yokohama stadium, cinematic lighting, ultra realistic",
-      "overlay_text": "2002: O PENTA\n- Sede: Coreia e Japão\n- O Retorno do Fenômeno\n- 2 gols na grande final",
-      "overlay_image_url": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/2002_FIFA_World_Cup.svg/200px-2002_FIFA_World_Cup.svg.png"
-    }
-]
-
-# Inicializa o estado
-if 'scenes' not in st.session_state:
-    st.session_state.scenes = default_scenes.copy()
 
 # --- UI STREAMLIT ---
 st.set_page_config(page_title="Gerador Wan 2.1", layout="wide")
-st.title("🎬 Ilha de Edição IA - Modo Premium")
-st.markdown("Textos alinhados à esquerda, gigantes, com sombra e animação fluida.")
+st.title("🎬 Ilha de Edição IA - Modo Raiz")
+st.markdown("Cole o seu JSON abaixo. Texto menor e grudado na esquerda.")
 
 with st.sidebar:
     st.header("Configurações")
     api_key = st.text_input("SiliconFlow API Key", type="password", help="Vazio = Simulação com fundos coloridos")
 
-# --- CONSTRUTOR DE CENAS ---
-for i, scene in enumerate(st.session_state.scenes):
-    with st.expander(f"🎬 Cena {i+1} | Tipo: {scene['type'].upper()}", expanded=False):
-        col1, col2 = st.columns([1, 4])
-        scene['type'] = col1.selectbox("Estilo", ["worker", "motion"], index=0 if scene['type'] == 'worker' else 1, key=f"type_{i}")
-        scene['text'] = col2.text_input("Narração (Voz)", value=scene.get('text', ''), key=f"text_{i}")
-        
-        scene['visual_prompt'] = st.text_area("Prompt para a IA (Inglês)", value=scene.get('visual_prompt', ''), key=f"prompt_{i}")
-        
-        col3, col4 = st.columns(2)
-        scene['overlay_text'] = col3.text_area("Motion Text (Sem emojis coloridos, use ENTER)", value=scene.get('overlay_text', ''), height=120, key=f"otext_{i}")
-        scene['overlay_image_url'] = col4.text_input("URL do Logotipo/Ícone", value=scene.get('overlay_image_url', ''), key=f"oimg_{i}")
-
-        if st.button(f"🗑️ Deletar Cena {i+1}", key=f"del_{i}"):
-            st.session_state.scenes.pop(i)
-            st.rerun()
-
-if st.button("➕ Adicionar Nova Cena", use_container_width=True):
-    st.session_state.scenes.append({"type": "worker", "text": "", "visual_prompt": "", "overlay_text": "", "overlay_image_url": ""})
-    st.rerun()
+# Área limpa só pro JSON
+json_input = st.text_area("Roteiro JSON:", height=400, placeholder='{\n  "scenes": [\n    ...\n  ]\n}')
 
 st.divider()
 
 # --- MOTOR DE RENDERIZAÇÃO ---
 if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width=True):
-    if len(st.session_state.scenes) == 0:
-        st.warning("Adicione pelo menos uma cena antes de renderizar!")
+    if not json_input.strip():
+        st.warning("Eita, esqueceu de colar o JSON aí, mestre!")
+        st.stop()
+        
+    try:
+        roteiro = json.loads(json_input)
+        if "scenes" not in roteiro:
+            st.error("JSON inválido: Faltou a chave 'scenes'.")
+            st.stop()
+    except Exception as e:
+        st.error(f"Erro de sintaxe no JSON. Dá uma revisada: {e}")
         st.stop()
 
     cleanup_temp()
@@ -203,9 +142,9 @@ if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width
     
     clips_finais = []
     progress_bar = st.progress(0)
-    total_scenes = len(st.session_state.scenes)
+    total_scenes = len(roteiro["scenes"])
     
-    for idx, cena in enumerate(st.session_state.scenes):
+    for idx, cena in enumerate(roteiro["scenes"]):
         st.write(f"⚙️ Processando cena {idx+1}...")
         
         audio_path = f"temp_files/audio_{idx}.mp3"
@@ -213,8 +152,11 @@ if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width
         audio_clip = AudioFileClip(audio_path)
         duration = audio_clip.duration
         
+        # Define fallback caso falte a chave 'type'
+        cena_type = cena.get("type", "worker")
+        
         if not api_key:
-            color = (20, 60, 120) if cena["type"] == "worker" else (120, 40, 40)
+            color = (20, 60, 120) if cena_type == "worker" else (120, 40, 40)
             base_clip = ColorClip(size=(1280, 720), color=color, duration=duration)
         else:
             base_clip = ColorClip(size=(1280, 720), color=(30, 80, 40), duration=duration)
@@ -236,15 +178,14 @@ if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width
             txt_array = create_text_overlay(cena["overlay_text"])
             txt_h = txt_array.shape[0]
             
-            # Centralizado verticalmente, mas fixo com 100px de margem na esquerda
             target_y = (720 - txt_h) // 2
             start_y = target_y + 120
             
-            # Posição X fixa em 100, animando apenas o Y pra deslizar bonitão
+            # Posição X colada na esquerda (50px) ao invés de 100px
             txt_clip = (ImageClip(txt_array)
                         .set_duration(duration)
                         .crossfadein(0.8)
-                        .set_position(lambda t, sy=start_y, ty=target_y: (100, int(sy - (sy - ty) * ease_out_cubic(t)))))
+                        .set_position(lambda t, sy=start_y, ty=target_y: (50, int(sy - (sy - ty) * ease_out_cubic(t)))))
             
             layers.append(txt_clip)
             
@@ -258,5 +199,5 @@ if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width
     output_path = "temp_files/video_final.mp4"
     video_final.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac", logger=None)
     
-    st.success("✅ Tá no ar! Aperta o play pra ver o texto de gente grande.")
+    st.success("✅ Tá no ar! Aperta o play pra ver a obra.")
     st.video(output_path)
