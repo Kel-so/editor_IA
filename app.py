@@ -107,22 +107,22 @@ def build_slide_html(idx, cena, dur_ms):
 st.set_page_config(page_title="WebMotion Master", layout="wide")
 st.title("🎬 Gerador de Vídeo Híbrido (HTML5 Motion)")
 
-# Roteiro padrão para demonstração
-DEFAULT_ROTEIRO = {{
+# Roteiro padrão (Corrigido para chaves simples)
+DEFAULT_ROTEIRO = {
   "project_name": "Futuro_da_Criatividade",
   "scenes": [
-    {{
+    {
       "layout": "centered_list",
       "text": "O futuro da criatividade não é sobre máquinas, mas sobre o que fazemos com elas.",
-      "overlay_text": "A NOVA ERA\\nCRIATIVA",
+      "overlay_text": "A NOVA ERA\nCRIATIVA",
       "subtitle": "Expandindo os limites",
       "bullets": ["Inovação", "Design", "Tecnologia"],
       "accent_color": "purple-500",
       "icon_emoji": "✨",
       "video_url": "https://assets.mixkit.co/videos/preview/mixkit-abstract-graphic-of-a-starry-galaxy-background-39744-large.mp4"
-    }}
+    }
   ]
-}}
+}
 
 # Carregamento do input JSON
 if os.path.exists("roteiro_premium.json"):
@@ -137,7 +137,7 @@ if st.button("🚀 Renderizar Experiência Web", type="primary", use_container_w
     try:
         roteiro = json.loads(json_input)
     except Exception as e:
-        st.error(f"Erro no JSON: {{e}}")
+        st.error(f"Erro no JSON: {e}")
         st.stop()
 
     cleanup_temp()
@@ -149,9 +149,9 @@ if st.button("🚀 Renderizar Experiência Web", type="primary", use_container_w
     total_scenes = len(roteiro["scenes"])
     
     for idx, cena in enumerate(roteiro["scenes"]):
-        st.write(f"🎙️ A processar: {{cena.get('overlay_text', 'Cena ' + str(idx+1))}}")
+        st.write(f"🎙️ A processar: {cena.get('overlay_text', 'Cena ' + str(idx+1))}")
         
-        audio_path = f"temp_files/audio_{{idx}}.mp3"
+        audio_path = f"temp_files/audio_{idx}.mp3"
         asyncio.run(gen_audio(cena["text"], audio_path))
         clip = AudioFileClip(audio_path)
         audio_clips.append(clip)
@@ -201,7 +201,7 @@ if st.button("🚀 Renderizar Experiência Web", type="primary", use_container_w
             </button>
         </div>
         <audio id="audio" src="data:audio/mp3;base64,{audio_b64}"></audio>
-        <div id="container" class="relative w-full h-full flex items-center justify-center">{{slides_html}}</div>
+        <div id="container" class="relative w-full h-full flex items-center justify-center">{slides_html}</div>
         <div class="fixed bottom-12 left-0 right-0 px-20 max-w-6xl mx-auto w-full">
             <div class="flex gap-2" id="progress-bar"></div>
             <div class="mt-4 flex justify-between text-xs font-black text-slate-600 uppercase tracking-[0.4em]">
