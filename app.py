@@ -93,9 +93,29 @@ st.set_page_config(page_title="WebMotion IA", layout="wide")
 st.title("🎨 Editor de Experiências HTML5")
 st.markdown("Transformando JSON em apresentações imersivas com sincronia de áudio.")
 
-# Carrega o roteiro de Inteligência Emocional por padrão
-with open("roteiro_ie.json", "r", encoding="utf-8") as f:
-    default_json = f.read()
+# Roteiro Padrão embutido para evitar FileNotFoundError
+DEFAULT_ROTEIRO = {
+  "project_name": "Doc_Inteligencia_Emocional_Premium",
+  "scenes": [
+    {
+      "layout": "split_hero",
+      "text": "Inteligência Emocional não é sobre engolir o choro ou virar um robô. É sobre entender o que você sente.",
+      "overlay_text": "AUTOCONHECIMENTO",
+      "subtitle": "A base de tudo",
+      "bullets": ["Identificar gatilhos", "Nomear sentimentos", "Perceber reações"],
+      "accent_color": "blue-500",
+      "icon_emoji": "🧠",
+      "image_url": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=500&auto=format&fit=crop"
+    }
+  ]
+}
+
+# Tenta carregar do arquivo, se não existir usa o DEFAULT_ROTEIRO acima
+if os.path.exists("roteiro_ie.json"):
+    with open("roteiro_ie.json", "r", encoding="utf-8") as f:
+        default_json = f.read()
+else:
+    default_json = json.dumps(DEFAULT_ROTEIRO, indent=2, ensure_ascii=False)
 
 json_input = st.text_area("Roteiro JSON (Edite à vontade):", value=default_json, height=300)
 
