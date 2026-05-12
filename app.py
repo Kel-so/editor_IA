@@ -6,7 +6,7 @@ import asyncio
 import requests
 import shutil
 import edge_tts
-from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips, ColorClip, ImageSequenceClip
+from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips, ColorClip
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
@@ -25,24 +25,21 @@ def gerar_audio(text, voice, output_path):
         return False
 
 def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
-    # SIMULAÇÃO SE NÃO HOUVER CHAVE
+    # MODO DE SIMULAÇÃO (Sem Chave)
     if not api_key or api_key.strip() == "":
         st.info(f"Modo de simulação ativo. Fabricando clipe em branco para montagem...")
         try:
             duracao = max(int(duration_fallback), 1) 
             clip = ColorClip(size=(1280, 720), color=(20, 30, 80), duration=duracao)
             clip.write_videofile(output_filename, fps=24, logger=None)
-            
-            if os.path.exists(output_filename):
-                 return True
-            return False
+            return os.path.exists(output_filename)
         except Exception as e:
             st.error(f"Falha na simulação MoviePy: {e}")
             return False
 
-    # MODO REAL (WAN 2.1 via SiliconFlow)
+    # MODO REAL (SiliconFlow - Wan 2.1)
     if not api_key.startswith("sk-"):
-        st.error("Sua chave da API parece inválida. Chaves da SiliconFlow começam com 'sk-'. Verifique e tente novamente.")
+        st.error("Sua chave da API parece inválida. Chaves da SiliconFlow começam com 'sk-'.")
         return False
 
     headers = {
@@ -51,7 +48,6 @@ def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
     }
     
     url_submit = "https://api.siliconflow.cn/v1/video/submit"
-    
     data = {
         "model": "alibaba/wan-2.1-t2v",
         "prompt": prompt,
@@ -82,7 +78,6 @@ def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
         while True:
             status_data = {"task_id": task_id}
             status_response = requests.post(status_url, headers=headers, json=status_data).json()
-            
             status = status_response.get("data", {}).get("status")
             
             if status == "SUCCESS":
@@ -106,80 +101,67 @@ def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
         st.error(f"Erro na comunicação com a API: {e}")
         return False
 
-# Função ninja para desenhar overlays usando PIL (bypassa o ImageMagick)
+# Função para desenhar overlays nativamente (Evita erros do ImageMagick/Pillow no Streamlit)
 def add_overlay_to_frame(frame, texto, img_path):
-    # Converte o frame do MoviePy (numpy array) para uma Imagem PIL
     pil_img = Image.fromarray(frame)
     width, height = pil_img.size
     
-    # 1. Adicionar Imagem
+    # Adicionar Imagem
     if img_path and os.path.exists(img_path):
         try:
             overlay_img = Image.open(img_path).convert("RGBA")
-            # Redimensiona (usando a constante moderna ou um fallback seguro)
             try:
                 resample_filter = Image.Resampling.LANCZOS
             except AttributeError:
-                resample_filter = Image.LANCZOS # Fallback para Pillow mais antigo
+                resample_filter = Image.LANCZOS 
                 
             nova_altura = 150
             proporcao = nova_altura / float(overlay_img.size[1])
             nova_largura = int((float(overlay_img.size[0]) * float(proporcao)))
             overlay_img = overlay_img.resize((nova_largura, nova_altura), resample_filter)
             
-            # Posição (Canto superior direito)
             x_pos = width - nova_largura - 30
             y_pos = 30
-            
-            # Cola a imagem sobre o frame usando alpha channel para transparência
             pil_img.paste(overlay_img, (x_pos, y_pos), overlay_img)
-        except Exception as e:
-            pass # Silencia erros de imagem frame a frame
+        except Exception:
+            pass 
             
-    # 2. Adicionar Texto
+    # Adicionar Texto
     if texto:
         draw = ImageDraw.Draw(pil_img)
-        # Tenta carregar uma fonte do sistema, se falhar, usa a fonte default (pequena, mas funciona sem crashar)
         try:
-            # Em servidores linux, costuma ter DejaVu
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
         except IOError:
              try:
-                 # Fallback windows
                  font = ImageFont.truetype("arial.ttf", 60)
              except:
                  font = ImageFont.load_default()
         
-        # Pega o tamanho do texto para centralizar
         try:
              bbox = font.getbbox(texto)
              text_width = bbox[2] - bbox[0]
              text_height = bbox[3] - bbox[1]
         except AttributeError:
-             # Fallback para Pillow antigasso (getsize)
              text_width, text_height = draw.textsize(texto, font=font)
              
-        # Posição (Centralizado, na parte inferior)
         x_text = (width - text_width) / 2
         y_text = height * 0.8
         
-        # Desenha Borda (Stroke manual simulado)
         stroke_color = "black"
-        stroke_width = 2
+        stroke_width = 3
         for offset_x in range(-stroke_width, stroke_width+1):
             for offset_y in range(-stroke_width, stroke_width+1):
                  draw.text((x_text + offset_x, y_text + offset_y), texto, font=font, fill=stroke_color)
                  
-        # Desenha Texto principal
         draw.text((x_text, y_text), texto, font=font, fill="white")
 
-    # Retorna o frame alterado como numpy array para o MoviePy
     return np.array(pil_img)
+
 
 st.set_page_config(page_title="Auto-Studio IA", page_icon="🎬", layout="wide")
 
-st.title("🎬 Orquestrador de Vídeo 100% IA + Camadas")
-st.markdown("Agora com suporte a **Textos** e **Imagens** sobrepostas (Renderização Nativa PIL)!")
+st.title("🎬 Orquestrador de Vídeo Wan 2.1")
+st.markdown("Gerador de vídeo com composição nativa (Camadas de Imagem e Texto).")
 
 with st.sidebar:
     st.header("⚙️ Configurações")
@@ -188,24 +170,23 @@ with st.sidebar:
 
 st.subheader("📝 Seu Roteiro (JSON)")
 
-# Roteiro padrão atualizado com textos e imagens
 roteiro_padrao = """{
-  "project_name": "Video_Tech_Avancado",
+  "project_name": "Video_Industria_Futuro",
   "scenes": [
     {
       "id": 1,
       "type": "worker",
-      "text": "A revolução industrial do nosso século não é feita apenas de engrenagens.",
-      "prompt": "Cinematic 4k, medium shot, a focused engineer wearing safety glasses in a modern factory",
-      "overlay_text": "REVOLUÇÃO 5.0"
+      "text": "A revolução industrial do nosso século não é feita apenas de engrenagens, mas de inteligência e adaptação.",
+      "prompt": "Cinematic 4k, medium shot, a focused engineer wearing safety glasses and a futuristic vest, looking at a glowing holographic blueprint in a high-tech modern factory, cinematic lighting, photorealistic",
+      "overlay_text": "INDÚSTRIA 5.0"
     },
     {
       "id": 2,
       "type": "motion",
-      "text": "Dados fluem em tempo real, conectando processos de forma perfeita.",
-      "prompt": "Abstract motion graphics, glowing blue data streams flowing",
-      "overlay_text": "DADOS EM TEMPO REAL",
-      "overlay_image_url": "https://cdn-icons-png.flaticon.com/512/3208/3208726.png"
+      "text": "Dados fluem em tempo real, conectando máquinas, processos e pessoas em um ecossistema digital perfeito.",
+      "prompt": "Abstract motion graphics, glowing blue and gold data streams flowing through a dark environment, futuristic fiber optics, high quality 3d render, dynamic camera movement",
+      "overlay_text": "ECOSSISTEMA DIGITAL",
+      "overlay_image_url": "https://cdn-icons-png.flaticon.com/512/8672/8672990.png"
     }
   ]
 }"""
@@ -245,16 +226,14 @@ if st.button("🚀 Gerar Vídeo Final", use_container_width=True, type="primary"
             duracao_audio = clip_audio.duration
             
             sucesso_video = gerar_video(cena["prompt"], video_path, siliconflow_key, duracao_audio)
-            
             if not sucesso_video:
                 st.error("Falha no vídeo.")
                 clip_audio.close()
                 st.stop()
             
-            st.write("✂️ Processando Frames e Renderizando Camadas...")
+            st.write("✂️ Aplicando Camadas e Sincronizando...")
             clip_video = VideoFileClip(video_path)
             
-            # Loop ou Corte para bater com o áudio
             if clip_video.duration < duracao_audio:
                 clip_video = clip_video.loop(duration=duracao_audio)
             else:
@@ -271,9 +250,8 @@ if st.button("🚀 Gerar Vídeo Final", use_container_width=True, type="primary"
                      with open(img_path, 'wb') as f:
                          f.write(img_data)
                  except:
-                     img_path = None # Falhou download, segue o baile sem imagem
+                     img_path = None
 
-            # Aplica o filtro customizado frame a frame SE houver texto ou imagem
             if texto_overlay or img_path:
                 clip_video = clip_video.fl_image(lambda frame: add_overlay_to_frame(frame, texto_overlay, img_path))
                 
@@ -284,7 +262,7 @@ if st.button("🚀 Gerar Vídeo Final", use_container_width=True, type="primary"
             st.divider()
 
         if video_clips:
-            st.write("🎞️ Renderizando composição final (isso exige bastante processamento)...")
+            st.write("🎞️ Renderizando composição final (isso exige processamento)...")
             video_final = concatenate_videoclips(video_clips, method="compose")
             output_file = f"{roteiro['project_name']}.mp4"
             video_final.write_videofile(output_file, fps=24, codec="libx264", audio_codec="aac", logger=None)
