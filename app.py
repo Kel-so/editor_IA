@@ -62,7 +62,10 @@ def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
         st.write("Conectando aos servidores da SiliconFlow (Modelo Wan 2.1)...")
         response_post = requests.post(url_submit, headers=headers, json=data)
         
-        if response_post.status_code != 200:
+        if response_post.status_code == 401:
+            st.error("Erro 401: Sua chave da API é inválida. Verifique se copiou corretamente do site da SiliconFlow (geralmente começa com 'sk-') ou deixe o campo vazio na barra lateral para usar a simulação gratuita.")
+            return False
+        elif response_post.status_code != 200:
             st.error(f"A SiliconFlow recusou o pedido. Código {response_post.status_code}. Detalhes: {response_post.text}")
             return False
             
@@ -113,7 +116,7 @@ st.title("🎬 Orquestrador de Vídeo 100% IA (Wan 2.1 Edition)")
 
 with st.sidebar:
     st.header("⚙️ Configurações")
-    replicate_key = st.text_input("SiliconFlow API Key", type="password", help="Deixe em branco para rodar a simulação.")
+    siliconflow_key = st.text_input("SiliconFlow API Key", type="password", help="Deixe em branco para rodar a simulação.")
     voz_escolhida = st.selectbox("Voz", options=["pt-BR-AntonioNeural", "pt-BR-FranciscaNeural"])
 
 st.subheader("📝 Seu Roteiro (JSON)")
@@ -166,7 +169,7 @@ if st.button("🚀 Gerar Vídeo Final", use_container_width=True, type="primary"
             duracao_audio = clip_audio.duration
             
             # 2. Gerar Vídeo
-            sucesso_video = gerar_video(cena["prompt"], video_path, replicate_key, duracao_audio)
+            sucesso_video = gerar_video(cena["prompt"], video_path, siliconflow_key, duracao_audio)
             
             # BLINDAGEM: Se o vídeo não existir fisicamente, o MoviePy não é chamado.
             if not sucesso_video or not os.path.exists(video_path):
