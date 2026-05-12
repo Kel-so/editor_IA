@@ -21,36 +21,54 @@ async def gen_audio(text, filepath):
     tts = edge_tts.Communicate(text, "pt-BR-AntonioNeural")
     await tts.save(filepath)
 
-# --- TEXTO PREMIUM (SOMBRA + TAMANHO EXATO) ---
+# --- FUNÇÃO DE EASING (Para o movimento ficar fluido estilo After Effects) ---
+def ease_out_cubic(t, duration=0.8):
+    # Vai de 0 a 1 de forma suave, desacelerando no final
+    p = min(1.0, t / duration)
+    return 1 - pow(1 - p, 3)
+
+# --- TEXTO PREMIUM (CENTRALIZADO, MULTILINHA + SOFT SHADOW) ---
 def create_text_overlay(text):
-    font_path = "temp_files/Poppins-Black.ttf"
+    # Pegando a Montserrat Black pra dar aquele peso de "Blockbuster"
+    font_path = "temp_files/Montserrat-Black.ttf"
     try:
         if not os.path.exists(font_path):
-            font_url = "https://github.com/google/fonts/raw/main/ofl/poppins/Poppins-Black.ttf"
+            font_url = "https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Black.ttf"
             r = requests.get(font_url)
             with open(font_path, "wb") as f:
                 f.write(r.content)
-        font = ImageFont.truetype(font_path, 65) 
+        # Tamanho cavalo pra centralizar bonito
+        font = ImageFont.truetype(font_path, 80)
     except:
         font = ImageFont.load_default()
         
     temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
     temp_draw = ImageDraw.Draw(temp_img)
     try:
-        bbox = temp_draw.textbbox((0, 0), text, font=font)
+        # multiline_textbbox entende as quebras de linha (\n)
+        bbox = temp_draw.multiline_textbbox((0, 0), text, font=font, align="center")
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
     except:
-        text_w, text_h = 400, 60
+        text_w, text_h = 600, 200
         
-    padding = 20
+    # Lona exata do texto + respiro gigante pra sombra suave
+    padding = 40
     img = Image.new('RGBA', (text_w + padding*2, text_h + padding*2), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # Drop Shadow
-    draw.text((padding + 5, padding + 5), text, font=font, fill=(0, 0, 0, 180))
-    # Texto Principal
-    draw.text((padding, padding), text, font=font, fill="white")
+    # 1. SOFT DROP SHADOW (Gambiarra premium iterativa)
+    # Desenhamos várias camadas pretas cada vez mais transparentes e espalhadas
+    for i in range(10, 0, -1):
+        alpha = int(255 * (0.02 * (11 - i))) # Vai ficando mais opaco no centro
+        shadow_color = (0, 0, 0, alpha)
+        draw.multiline_text((padding + (i*1.5), padding + (i*1.5)), text, font=font, fill=shadow_color, align="center")
+    
+    # Sombra base mais dura pra dar contraste final
+    draw.multiline_text((padding + 4, padding + 4), text, font=font, fill=(0, 0, 0, 200), align="center")
+    
+    # 2. Texto Principal Branco
+    draw.multiline_text((padding, padding), text, font=font, fill="white", align="center")
     
     return np.array(img)
 
@@ -66,60 +84,53 @@ def load_overlay_image(url):
     except Exception:
         return None
 
-# --- DADOS PADRÃO (SEU ROTEIRO CYBERPUNK) ---
+# --- DADOS PADRÃO (SAGA DO PENTACAMPEONATO) ---
 default_scenes = [
     {
       "type": "worker",
-      "text": "A revolução não vai ser transmitida na televisão. Vai ser programada.",
-      "visual_prompt": "Cinematic shot, cyberpunk hacker typing furiously in a dark neon-lit room, glowing screens reflecting on glasses, 4k, hyperrealistic",
-      "overlay_text": "CÓDIGO PURO",
-      "overlay_image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/182px-Python-logo-notext.svg.png"
+      "text": "O mundo conheceu a magia em 58. Na Suécia, a camisa amarela tornou-se lendária.",
+      "visual_prompt": "Cinematic archival style, 1958 vintage aesthetic, young Pelé crying and hugging teammates, film grain, highly detailed, 4k",
+      "overlay_text": "🏆 1958: A PRIMEIRA ESTRELA\n• Sede: Suécia\n• Destaque: Pelé (17 anos)\n• Gols na final: Pelé (2), Vavá (2), Zagallo",
+      "overlay_image_url": ""
     },
     {
       "type": "motion",
-      "text": "Servidores globais a sincronizar dados em tempo real. A infraestrutura invisível que move o mundo.",
-      "visual_prompt": "Abstract motion graphics, glowing blue and purple server racks forming a massive digital city, camera flying through data streams, 3D render, Octane",
-      "overlay_text": "INFRAESTRUTURA",
-      "overlay_image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/React-icon.svg/200px-React-icon.svg.png"
+      "text": "Quatro anos depois, o bicampeonato chegou com a força de Mané Garrincha.",
+      "visual_prompt": "Dynamic abstract motion graphics, golden stars flying through a dark stadium, epic lighting, unreal engine 5 render",
+      "overlay_text": "🏆 1962: O BICAMPEONATO\n• Sede: Chile\n• Herói: Garrincha\n• Final: Brasil 3 x 1 Tchecoslováquia",
+      "overlay_image_url": ""
     },
     {
       "type": "worker",
-      "text": "Não construímos apenas software. Destruímos as limitações do sistema antigo.",
-      "visual_prompt": "Close up, confident tech CEO looking at a floating holographic projection in a modern dark office, cinematic lighting, highly detailed",
-      "overlay_text": "SEM LIMITES",
+      "text": "A melhor seleção de todos os tempos. O tri no México consagrou o futebol arte.",
+      "visual_prompt": "Cinematic shot, 1970 iconic yellow jersey, intense sun, players celebrating with the Jules Rimet trophy, hyperrealistic, 8k",
+      "overlay_text": "🏆 1970: O TRI\n• Sede: México\n• O Esquadrão de Ouro\n• Capitão: Carlos Alberto Torres",
       "overlay_image_url": ""
     },
     {
       "type": "motion",
-      "text": "Velocidade, precisão e uma arquitetura desenhada para o caos.",
-      "visual_prompt": "Fast paced abstract 3D UI elements, glassmorphism, floating glowing charts and data nodes shifting dynamically, cyberpunk aesthetic",
-      "overlay_text": "CAOS CONTROLADO",
-      "overlay_image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/HTML5_logo_and_wordmark.svg/120px-HTML5_logo_and_wordmark.svg.png"
+      "text": "Após um jejum agoniante, o grito de É Tetra ecoou pelos Estados Unidos.",
+      "visual_prompt": "Modern glitch motion graphics, golden trophy forming from digital particles, dramatic blue and yellow lighting, 3d animation",
+      "overlay_text": "🏆 1994: É TETRA!\n• Sede: EUA\n• Dupla: Romário & Bebeto\n• Decisão sofrida nos pênaltis",
+      "overlay_image_url": ""
     },
     {
       "type": "worker",
-      "text": "A tua equipa precisa de estar armada com as melhores ferramentas da atualidade.",
-      "visual_prompt": "Team of diverse developers looking at a giant glowing interactive wall screen, neon ambient lighting, intense focus, 8k resolution",
-      "overlay_text": "A TUA EQUIPA",
-      "overlay_image_url": ""
-    },
-    {
-      "type": "motion",
-      "text": "O futuro já começou. Estás pronto para dominar o jogo?",
-      "visual_prompt": "Epic logo reveal motion, neon glowing geometric shapes forming a futuristic crest, dark background, lens flares, unreal engine 5",
-      "overlay_text": "DOMINA O JOGO",
-      "overlay_image_url": ""
+      "text": "E na Ásia, a redenção do Fenômeno trouxe o tão sonhado Pentacampeonato. O Brasil no topo do mundo.",
+      "visual_prompt": "Epic celebration, Ronaldo Fenômeno smiling with the World Cup trophy, confetti falling in Yokohama stadium, cinematic lighting, ultra realistic",
+      "overlay_text": "🏆 2002: O PENTA\n• Sede: Coreia e Japão\n• O Retorno do Fenômeno\n• 2 gols na grande final",
+      "overlay_image_url": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/2002_FIFA_World_Cup.svg/200px-2002_FIFA_World_Cup.svg.png"
     }
 ]
 
-# Inicializa o estado se for a primeira vez
+# Inicializa o estado
 if 'scenes' not in st.session_state:
     st.session_state.scenes = default_scenes.copy()
 
 # --- UI STREAMLIT ---
 st.set_page_config(page_title="Gerador Wan 2.1", layout="wide")
-st.title("🎬 Ilha de Edição IA - Modo Visual")
-st.markdown("Chega de editar JSON na mão. Monte seu vídeo abaixo:")
+st.title("🎬 Ilha de Edição IA - Modo Premium")
+st.markdown("Textos maiores, centralizados, multilinhas e animação fluida (Easing).")
 
 with st.sidebar:
     st.header("Configurações")
@@ -130,13 +141,14 @@ for i, scene in enumerate(st.session_state.scenes):
     with st.expander(f"🎬 Cena {i+1} | Tipo: {scene['type'].upper()}", expanded=False):
         col1, col2 = st.columns([1, 4])
         scene['type'] = col1.selectbox("Estilo", ["worker", "motion"], index=0 if scene['type'] == 'worker' else 1, key=f"type_{i}")
-        scene['text'] = col2.text_input("Texto da Narração (Voz)", value=scene.get('text', ''), key=f"text_{i}")
+        scene['text'] = col2.text_input("Narração (Voz)", value=scene.get('text', ''), key=f"text_{i}")
         
         scene['visual_prompt'] = st.text_area("Prompt para a IA (Inglês)", value=scene.get('visual_prompt', ''), key=f"prompt_{i}")
         
         col3, col4 = st.columns(2)
-        scene['overlay_text'] = col3.text_input("Motion Text (Surgirá na tela)", value=scene.get('overlay_text', ''), key=f"otext_{i}")
-        scene['overlay_image_url'] = col4.text_input("URL do Logotipo/Ícone (Opcional)", value=scene.get('overlay_image_url', ''), key=f"oimg_{i}")
+        # TEXT AREA AQUI PRA PODER DAR ENTER!
+        scene['overlay_text'] = col3.text_area("Motion Text (Use ENTER para pular linha)", value=scene.get('overlay_text', ''), height=120, key=f"otext_{i}")
+        scene['overlay_image_url'] = col4.text_input("URL do Logotipo/Ícone", value=scene.get('overlay_image_url', ''), key=f"oimg_{i}")
 
         if st.button(f"🗑️ Deletar Cena {i+1}", key=f"del_{i}"):
             st.session_state.scenes.pop(i)
@@ -155,7 +167,7 @@ if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width
         st.stop()
 
     cleanup_temp()
-    st.info("Trancando as portas da ilha de edição... Renderizando!")
+    st.info("Renderizando frame a frame com animações fluidas...")
     
     clips_finais = []
     progress_bar = st.progress(0)
@@ -178,7 +190,6 @@ if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width
         base_clip = base_clip.set_audio(audio_clip)
         layers = [base_clip]
         
-        # Logo com Fade In
         if cena.get("overlay_image_url"):
             img_array = load_overlay_image(cena["overlay_image_url"])
             if img_array is not None:
@@ -186,19 +197,23 @@ if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width
                              .set_duration(duration)
                              .set_position(("right", "top"))
                              .margin(top=30, right=30, opacity=0)
-                             .crossfadein(0.5))
+                             .crossfadein(0.8)) # Fade in mais longo
                 layers.append(logo_clip)
         
-        # Texto com Slide Up
         if cena.get("overlay_text"):
             txt_array = create_text_overlay(cena["overlay_text"])
             txt_h = txt_array.shape[0]
-            target_y = 720 - txt_h - 100
             
+            # Alvo é no MEIO exato da tela (720 / 2) - (altura do texto / 2)
+            target_y = (720 - txt_h) // 2
+            start_y = target_y + 120 # Nasce 120px pra baixo
+            
+            # Animação usando a função de Easing pra ficar com cara de profissional
             txt_clip = (ImageClip(txt_array)
                         .set_duration(duration)
-                        .crossfadein(0.5)
-                        .set_position(lambda t, y=target_y: ('center', int(y + max(0, 0.5 - t) * 100))))
+                        .crossfadein(0.8)
+                        .set_position(lambda t, sy=start_y, ty=target_y: ('center', int(sy - (sy - ty) * ease_out_cubic(t)))))
+            
             layers.append(txt_clip)
             
         cena_composita = CompositeVideoClip(layers, size=(1280, 720))
@@ -206,10 +221,10 @@ if st.button("🚀 Renderizar Vídeo Final", type="primary", use_container_width
         
         progress_bar.progress((idx + 1) / total_scenes)
 
-    st.write("✂️ Colando as cenas e aplicando aquele polimento...")
+    st.write("✂️ Unificando blocos e exportando...")
     video_final = concatenate_videoclips(clips_finais, method="compose")
     output_path = "temp_files/video_final.mp4"
     video_final.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac", logger=None)
     
-    st.success("✅ Cinema! Vídeo pronto.")
+    st.success("✅ Tá no ar! Aperta o play pra ver a fluidez.")
     st.video(output_path)
