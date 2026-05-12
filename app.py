@@ -7,7 +7,7 @@ import edge_tts
 import requests
 import numpy as np
 from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from moviepy.editor import ColorClip, AudioFileClip, CompositeVideoClip, ImageClip, concatenate_videoclips
 
 # --- SETUP E LIMPEZA ---
@@ -35,15 +35,17 @@ def create_text_overlay(text):
         # Se o arquivo não existir ou tiver menos de 10KB (sinal de que baixou erro 404)
         if not os.path.exists(font_path) or os.path.getsize(font_path) < 10000:
             font_url = "https://raw.githubusercontent.com/google/fonts/main/ofl/montserrat/Montserrat-Black.ttf"
-            r = requests.get(font_url)
+            headers = {'User-Agent': 'Mozilla/5.0'} # Finge que é navegador pra não ser bloqueado
+            r = requests.get(font_url, headers=headers)
             r.raise_for_status()
             with open(font_path, "wb") as f:
                 f.write(r.content)
         
-        # Tamanho cavalão e com suporte a acentos de boa
-        font = ImageFont.truetype(font_path, 100)
-    except:
-        # Se TUDO der errado, cai pra cá, mas com o link novo não deve acontecer
+        # Aumentei de 100 pra 130! Cavalo!
+        font = ImageFont.truetype(font_path, 130)
+    except Exception as e:
+        # Se der erro agora a gente vai saber nos logs
+        print(f"Erro ao carregar fonte premium: {e}")
         font = ImageFont.load_default()
         
     temp_img = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
@@ -56,26 +58,30 @@ def create_text_overlay(text):
     except:
         text_w, text_h = 800, 300
         
-    # Lona exata do texto + respiro gigante pra sombra suave
-    padding = 40
+    # Aumentei o respiro pra sombra esfumaçada não ser cortada nas bordas
+    padding = 80
     
     final_width = max(10, int(text_w) + padding * 2)
     final_height = max(10, int(text_h) + padding * 2)
     
     img = Image.new('RGBA', (final_width, final_height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
     
-    # 1. SOFT DROP SHADOW (Gambiarra premium iterativa)
-    for i in range(10, 0, -1):
-        alpha = int(255 * (0.02 * (11 - i)))
-        shadow_color = (0, 0, 0, alpha)
-        # Sombra alinhada à esquerda também
-        draw.multiline_text((padding + (i*1.5), padding + (i*1.5)), text, font=font, fill=shadow_color, align="left")
+    # 1. SOMBRA DIFUSA PROFISSIONAL (Gaussian Blur)
+    shadow_layer = Image.new('RGBA', (final_width, final_height), (0, 0, 0, 0))
+    shadow_draw = ImageDraw.Draw(shadow_layer)
     
-    # Sombra base mais dura pra dar contraste final
-    draw.multiline_text((padding + 4, padding + 4), text, font=font, fill=(0, 0, 0, 200), align="left")
+    # Desenha o texto preto deslocado um pouco pra direita e pra baixo
+    shadow_draw.multiline_text((padding + 10, padding + 15), text, font=font, fill=(0, 0, 0, 255), align="left")
+    
+    # Desfoca sem dó (raio de 15px)
+    shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=15))
+    
+    # Cola a sombra na imagem original. Colamos 2x pra ficar com um miolo bem escuro e borda suave.
+    img.alpha_composite(shadow_layer)
+    img.alpha_composite(shadow_layer)
     
     # 2. Texto Principal Branco (Alinhado à esquerda)
+    draw = ImageDraw.Draw(img)
     draw.multiline_text((padding, padding), text, font=font, fill="white", align="left")
     
     return np.array(img)
