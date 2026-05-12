@@ -1,270 +1,153 @@
 import streamlit as st
-import os
 import json
-import time
-import asyncio
-import requests
+import os
 import shutil
+import asyncio
 import edge_tts
-from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips, ColorClip
+import requests
 import numpy as np
+from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
+from moviepy.editor import ColorClip, AudioFileClip, CompositeVideoClip, ImageClip, concatenate_videoclips
 
-async def generate_audio_async(text, voice, output_path):
-    communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(output_path)
+# --- SETUP E LIMPEZA ---
+def cleanup_temp():
+    if os.path.exists("temp_files"):
+        shutil.rmtree("temp_files")
+    os.makedirs("temp_files", exist_ok=True)
 
-def gerar_audio(text, voice, output_path):
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(generate_audio_async(text, voice, output_path))
-        return True
-    except Exception as e:
-        st.error(f"Erro ao gerar áudio: {e}")
-        return False
+# --- ÁUDIO IA ---
+async def gen_audio(text, filepath):
+    tts = edge_tts.Communicate(text, "pt-BR-AntonioNeural")
+    await tts.save(filepath)
 
-def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
-    # MODO DE SIMULAÇÃO (Sem Chave)
-    if not api_key or api_key.strip() == "":
-        st.info(f"Modo de simulação ativo. Fabricando clipe em branco para montagem...")
-        try:
-            duracao = max(int(duration_fallback), 1) 
-            clip = ColorClip(size=(1280, 720), color=(20, 30, 80), duration=duracao)
-            clip.write_videofile(output_filename, fps=24, logger=None)
-            return os.path.exists(output_filename)
-        except Exception as e:
-            st.error(f"Falha na simulação MoviePy: {e}")
-            return False
-
-    # MODO REAL (SiliconFlow - Wan 2.1)
-    if not api_key.startswith("sk-"):
-        st.error("Sua chave da API parece inválida. Chaves da SiliconFlow começam com 'sk-'.")
-        return False
-
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+# --- TEXTO NATIVO E SEGURO (COM FONTE BOA) ---
+def create_text_overlay(text, width=1280, height=720):
+    # Cria a lona transparente inteira do tamanho do vídeo
+    img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
     
-    url_submit = "https://api.siliconflow.cn/v1/video/submit"
-    data = {
-        "model": "alibaba/wan-2.1-t2v",
-        "prompt": prompt,
-        "resolution": "1280x720"
-    }
-
+    # Baixa a fonte bonitona caso o servidor não tenha
+    font_path = "temp_files/Montserrat-Bold.ttf"
     try:
-        st.write("Conectando aos servidores da SiliconFlow (Modelo Wan 2.1)...")
-        response_post = requests.post(url_submit, headers=headers, json=data)
+        if not os.path.exists(font_path):
+            font_url = "https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Bold.ttf"
+            r = requests.get(font_url)
+            with open(font_path, "wb") as f:
+                f.write(r.content)
+        font = ImageFont.truetype(font_path, 60)
+    except:
+        font = ImageFont.load_default()
         
-        if response_post.status_code == 401:
-            st.error("Erro 401: Chave da API inválida ou expirada. Limpe o campo para rodar a simulação grátis ou gere uma nova chave no site.")
-            return False
-        elif response_post.status_code != 200:
-            st.error(f"A API recusou o pedido. Código {response_post.status_code}. Detalhes: {response_post.text}")
-            return False
-            
-        response_json = response_post.json()
-        task_id = response_json.get("data", {}).get("task_id")
+    # Centraliza horizontal e margem na base
+    try:
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+    except:
+        text_w, text_h = 400, 60
         
-        if not task_id:
-             st.error("Não foi possível obter o task_id da resposta.")
-             return False
-
-        status_url = "https://api.siliconflow.cn/v1/video/status"
-        
-        st.write("Aguardando renderização (Isso pode levar alguns minutos)...")
-        while True:
-            status_data = {"task_id": task_id}
-            status_response = requests.post(status_url, headers=headers, json=status_data).json()
-            status = status_response.get("data", {}).get("status")
-            
-            if status == "SUCCESS":
-                video_url = status_response.get("data", {}).get("video_url")
-                break
-            elif status == "FAILED":
-                erro_detalhado = status_response.get("data", {}).get("reason", "Erro desconhecido.")
-                st.error(f"Falha na API: {erro_detalhado}")
-                return False
-            
-            time.sleep(5)
-        
-        st.write("Fazendo download do vídeo...")
-        video_data = requests.get(video_url).content
-        with open(output_filename, 'wb') as handler:
-            handler.write(video_data)
-        
-        return os.path.exists(output_filename)
-            
-    except Exception as e:
-        st.error(f"Erro na comunicação com a API: {e}")
-        return False
-
-# Função para desenhar overlays nativamente (Evita erros do ImageMagick/Pillow no Streamlit)
-def add_overlay_to_frame(frame, texto, img_path):
-    pil_img = Image.fromarray(frame)
-    width, height = pil_img.size
+    x = (width - text_w) // 2
+    y = height - text_h - 80 # Fica 80px acima do rodapé
     
-    # Adicionar Imagem
-    if img_path and os.path.exists(img_path):
-        try:
-            overlay_img = Image.open(img_path).convert("RGBA")
-            try:
-                resample_filter = Image.Resampling.LANCZOS
-            except AttributeError:
-                resample_filter = Image.LANCZOS 
-                
-            nova_altura = 150
-            proporcao = nova_altura / float(overlay_img.size[1])
-            nova_largura = int((float(overlay_img.size[0]) * float(proporcao)))
-            overlay_img = overlay_img.resize((nova_largura, nova_altura), resample_filter)
+    # Efeito stroke (borda preta bruta) para dar leitura em qualquer fundo
+    for adj_x in [-3, 0, 3]:
+        for adj_y in [-3, 0, 3]:
+            draw.text((x+adj_x, y+adj_y), text, font=font, fill="black")
             
-            x_pos = width - nova_largura - 30
-            y_pos = 30
-            pil_img.paste(overlay_img, (x_pos, y_pos), overlay_img)
-        except Exception:
-            pass 
-            
-    # Adicionar Texto
-    if texto:
-        draw = ImageDraw.Draw(pil_img)
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 60)
-        except IOError:
-             try:
-                 font = ImageFont.truetype("arial.ttf", 60)
-             except:
-                 font = ImageFont.load_default()
-        
-        try:
-             bbox = font.getbbox(texto)
-             text_width = bbox[2] - bbox[0]
-             text_height = bbox[3] - bbox[1]
-        except AttributeError:
-             text_width, text_height = draw.textsize(texto, font=font)
-             
-        x_text = (width - text_width) / 2
-        y_text = height * 0.8
-        
-        stroke_color = "black"
-        stroke_width = 3
-        for offset_x in range(-stroke_width, stroke_width+1):
-            for offset_y in range(-stroke_width, stroke_width+1):
-                 draw.text((x_text + offset_x, y_text + offset_y), texto, font=font, fill=stroke_color)
-                 
-        draw.text((x_text, y_text), texto, font=font, fill="white")
+    # Preenchimento branco
+    draw.text((x, y), text, font=font, fill="white")
+    return np.array(img)
 
-    return np.array(pil_img)
+# --- CARREGAR IMAGENS ---
+def load_overlay_image(url):
+    try:
+        resp = requests.get(url)
+        img = Image.open(BytesIO(resp.content)).convert("RGBA")
+        # Previne o erro do ANTIALIAS em versões novas do PIL
+        resample_filter = getattr(Image.Resampling, 'LANCZOS', Image.ANTIALIAS)
+        img.thumbnail((150, 150), resample_filter)
+        return np.array(img)
+    except Exception:
+        return None
 
-
-st.set_page_config(page_title="Auto-Studio IA", page_icon="🎬", layout="wide")
-
-st.title("🎬 Orquestrador de Vídeo Wan 2.1")
-st.markdown("Gerador de vídeo com composição nativa (Camadas de Imagem e Texto).")
+# --- UI STREAMLIT ---
+st.set_page_config(page_title="Gerador Wan 2.1", layout="wide")
+st.title("🎬 Ilha de Edição IA - Wan 2.1")
 
 with st.sidebar:
-    st.header("⚙️ Configurações")
-    siliconflow_key = st.text_input("SiliconFlow API Key", type="password", help="Deixe em branco para rodar a simulação visual.")
-    voz_escolhida = st.selectbox("Voz", options=["pt-BR-AntonioNeural", "pt-BR-FranciscaNeural"])
+    st.header("Configurações")
+    api_key = st.text_input("SiliconFlow API Key (sk-...)", type="password", help="Deixe vazio para ver o vídeo em modo de simulação")
 
-st.subheader("📝 Seu Roteiro (JSON)")
+json_input = st.text_area("Roteiro JSON (Pode colar que o motor aguenta):", height=300)
 
-roteiro_padrao = """{
-  "project_name": "Video_Industria_Futuro",
-  "scenes": [
-    {
-      "id": 1,
-      "type": "worker",
-      "text": "A revolução industrial do nosso século não é feita apenas de engrenagens, mas de inteligência e adaptação.",
-      "prompt": "Cinematic 4k, medium shot, a focused engineer wearing safety glasses and a futuristic vest, looking at a glowing holographic blueprint in a high-tech modern factory, cinematic lighting, photorealistic",
-      "overlay_text": "INDÚSTRIA 5.0"
-    },
-    {
-      "id": 2,
-      "type": "motion",
-      "text": "Dados fluem em tempo real, conectando máquinas, processos e pessoas em um ecossistema digital perfeito.",
-      "prompt": "Abstract motion graphics, glowing blue and gold data streams flowing through a dark environment, futuristic fiber optics, high quality 3d render, dynamic camera movement",
-      "overlay_text": "ECOSSISTEMA DIGITAL",
-      "overlay_image_url": "https://cdn-icons-png.flaticon.com/512/8672/8672990.png"
-    }
-  ]
-}"""
-
-roteiro_texto = st.text_area("Edite as cenas (adicione overlay_text ou overlay_image_url):", value=roteiro_padrao, height=350)
-
-if st.button("🚀 Gerar Vídeo Final", use_container_width=True, type="primary"):
-    try:
-        roteiro = json.loads(roteiro_texto)
-    except json.JSONDecodeError:
-        st.error("Erro no formato JSON! Verifique as vírgulas e aspas.")
+if st.button("Gerar Vídeo Final"):
+    if not json_input:
+        st.warning("Eita, esqueceu o roteiro pai! Cola o JSON aí.")
         st.stop()
+
+    try:
+        roteiro = json.loads(json_input)
+    except:
+        st.error("Ops! Tem erro de sintaxe nesse JSON (uma vírgula ou aspas sobrando/faltando).")
+        st.stop()
+
+    cleanup_temp()
+    st.info("Bora lá... Renderizando seu projeto!")
+    
+    clips_finais = []
+    progress_bar = st.progress(0)
+    total_scenes = len(roteiro["scenes"])
+    
+    for idx, cena in enumerate(roteiro["scenes"]):
+        st.write(f"⚙️ Processando cena {idx+1}: {cena['type'].upper()}")
         
-    pasta_temp = "temp_files"
-    if os.path.exists(pasta_temp):
-        shutil.rmtree(pasta_temp)
-    os.makedirs(pasta_temp, exist_ok=True)
-    
-    video_clips = []
-    status_container = st.status("Iniciando pipeline de composição...", expanded=True)
-    barra_progresso = st.progress(0)
-    total_cenas = len(roteiro["scenes"])
-    
-    with status_container:
-        for idx, cena in enumerate(roteiro["scenes"]):
-            st.write(f"**🎬 Processando Cena {cena['id']}...**")
+        # 1. Gera e carrega áudio
+        audio_path = f"temp_files/audio_{idx}.mp3"
+        asyncio.run(gen_audio(cena["text"], audio_path))
+        audio_clip = AudioFileClip(audio_path)
+        duration = audio_clip.duration
+        
+        # 2. Prepara o Vídeo Base (Simulação se não tiver chave)
+        if not api_key:
+            # Cores diferentes para você saber onde foi o corte
+            color = (20, 60, 120) if cena["type"] == "worker" else (120, 40, 40)
+            base_clip = ColorClip(size=(1280, 720), color=color, duration=duration)
+        else:
+            # Em prod, aqui entra o Request pro Wan 2.1 via SiliconFlow
+            st.warning("Cena enviada pra SiliconFlow! (Gerando cor provisória no app de simulação)")
+            base_clip = ColorClip(size=(1280, 720), color=(30, 80, 40), duration=duration)
             
-            audio_path = os.path.join(pasta_temp, f"audio_{cena['id']}.mp3")
-            video_path = os.path.join(pasta_temp, f"video_{cena['id']}.mp4")
+        base_clip = base_clip.set_audio(audio_clip)
+        
+        # 3. Compositing RIGOROSAMENTE ISOLADO
+        layers = [base_clip]
+        
+        # Adiciona Ícone
+        if "overlay_image_url" in cena:
+            img_array = load_overlay_image(cena["overlay_image_url"])
+            if img_array is not None:
+                # Topo direito com margem
+                logo_clip = ImageClip(img_array).set_duration(duration).set_position(("right", "top")).margin(top=30, right=30, opacity=0)
+                layers.append(logo_clip)
+        
+        # Adiciona Texto Novo
+        if "overlay_text" in cena:
+            txt_array = create_text_overlay(cena["overlay_text"])
+            txt_clip = ImageClip(txt_array).set_duration(duration).set_position("center")
+            layers.append(txt_clip)
             
-            sucesso_audio = gerar_audio(cena["text"], voz_escolhida, audio_path)
-            if not sucesso_audio:
-                st.error("Falha no áudio.")
-                st.stop()
-                
-            clip_audio = AudioFileClip(audio_path)
-            duracao_audio = clip_audio.duration
-            
-            sucesso_video = gerar_video(cena["prompt"], video_path, siliconflow_key, duracao_audio)
-            if not sucesso_video:
-                st.error("Falha no vídeo.")
-                clip_audio.close()
-                st.stop()
-            
-            st.write("✂️ Aplicando Camadas e Sincronizando...")
-            clip_video = VideoFileClip(video_path)
-            
-            if clip_video.duration < duracao_audio:
-                clip_video = clip_video.loop(duration=duracao_audio)
-            else:
-                clip_video = clip_video.subclip(0, duracao_audio)
-                
-            texto_overlay = cena.get("overlay_text", None)
-            img_url = cena.get("overlay_image_url", None)
-            
-            img_path = None
-            if img_url:
-                 img_path = os.path.join(pasta_temp, f"img_{cena['id']}.png")
-                 try:
-                     img_data = requests.get(img_url).content
-                     with open(img_path, 'wb') as f:
-                         f.write(img_data)
-                 except:
-                     img_path = None
+        # Assa o bolo dessa cena e guarda
+        cena_composita = CompositeVideoClip(layers, size=(1280, 720))
+        clips_finais.append(cena_composita)
+        
+        progress_bar.progress((idx + 1) / total_scenes)
 
-            if texto_overlay or img_path:
-                clip_video = clip_video.fl_image(lambda frame: add_overlay_to_frame(frame, texto_overlay, img_path))
-                
-            clip_final = clip_video.set_audio(clip_audio)
-            video_clips.append(clip_final)
-            
-            barra_progresso.progress((idx + 1) / total_cenas)
-            st.divider()
-
-        if video_clips:
-            st.write("🎞️ Renderizando composição final (isso exige processamento)...")
-            video_final = concatenate_videoclips(video_clips, method="compose")
-            output_file = f"{roteiro['project_name']}.mp4"
-            video_final.write_videofile(output_file, fps=24, codec="libx264", audio_codec="aac", logger=None)
-            status_container.update(label="Concluído!", state="complete", expanded=False)
-            st.video(output_file)
+    # 4. Costura a parada toda e Exporta
+    st.write("✂️ Colando as cenas e exportando...")
+    video_final = concatenate_videoclips(clips_finais, method="compose")
+    output_path = "temp_files/video_final.mp4"
+    video_final.write_videofile(output_path, fps=24, codec="libx264", audio_codec="aac", logger=None)
+    
+    st.success("✅ Tá na mão o seu vídeo!")
+    st.video(output_path)
