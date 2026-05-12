@@ -6,6 +6,7 @@ import shutil
 import asyncio
 import edge_tts
 import base64
+from io import BytesIO
 from moviepy.editor import AudioFileClip, concatenate_audioclips
 
 # --- SETUP E LIMPEZA ---
@@ -19,18 +20,86 @@ async def gen_audio(text, filepath):
     tts = edge_tts.Communicate(text, "pt-BR-AntonioNeural")
     await tts.save(filepath)
 
+# --- CONSTRUTOR DE LAYOUTS HTML ---
+def build_slide_html(idx, cena, dur_ms):
+    active_class = "active" if idx == 0 else ""
+    layout = cena.get("layout", "centered_list")
+    title = cena.get("overlay_text", "").replace("\n", "<br>")
+    subtitle = cena.get("subtitle", "")
+    bullets = cena.get("bullets", [])
+    img_url = cena.get("image_url", "")
+    emoji = cena.get("icon_emoji", "✨")
+    accent = cena.get("accent_color", "yellow-400")
+    
+    # Gera o HTML dos bullets
+    bullets_html = "".join([f'<li class="flex items-start gap-3 mb-2"><span class="text-{accent}">•</span> {b}</li>' for b in bullets])
+    
+    # Switch de Layouts
+    if layout == "split_hero":
+        content = f"""
+        <div class="flex flex-col md:flex-row items-center gap-10 w-full max-w-6xl">
+            <div class="flex-1 text-left">
+                <span class="text-{accent} font-black text-6xl mb-4 block animate-bounce">{emoji}</span>
+                <h2 class="text-6xl font-black mb-4 uppercase tracking-tighter">{title}</h2>
+                <p class="text-2xl text-slate-400 mb-6 font-light">{subtitle}</p>
+                <ul class="text-xl text-slate-300">{bullets_html}</ul>
+            </div>
+            <div class="flex-1">
+                <img src="{img_url}" class="rounded-3xl shadow-2xl border-4 border-white/10 rotate-2 hover:rotate-0 transition-transform duration-500">
+            </div>
+        </div>
+        """
+    elif layout == "quote_focus":
+        content = f"""
+        <div class="text-center max-w-4xl">
+            <span class="text-8xl opacity-20 block mb-[-40px]">"</span>
+            <h2 class="text-5xl md:text-6xl font-serif italic mb-8 leading-tight">{cena.get('text')}</h2>
+            <div class="h-1 w-24 bg-{accent} mx-auto mb-6"></div>
+            <p class="text-2xl font-bold uppercase tracking-widest text-{accent}">{title}</p>
+            <p class="text-slate-500">{subtitle}</p>
+        </div>
+        """
+    elif layout == "grid_stats":
+        content = f"""
+        <div class="w-full max-w-5xl">
+            <h2 class="text-4xl font-black mb-12 text-center uppercase tracking-widest">{title}</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {"".join([f'<div class="glass-card p-8 rounded-3xl border-t-4 border-{accent}"><p class="text-lg">{b}</p></div>' for b in bullets])}
+            </div>
+        </div>
+        """
+    else: # centered_list (Default)
+        content = f"""
+        <div class="text-center max-w-3xl">
+            <div class="inline-block p-4 rounded-2xl bg-{accent}/10 border border-{accent}/20 mb-6">
+                <span class="text-5xl">{emoji}</span>
+            </div>
+            <h2 class="text-6xl font-black mb-4 uppercase tracking-tight">{title}</h2>
+            <p class="text-2xl text-{accent} mb-8 font-medium">{subtitle}</p>
+            <div class="glass-card p-8 rounded-3xl text-left inline-block w-full">
+                <ul class="space-y-4 text-xl text-slate-200">{bullets_html}</ul>
+            </div>
+        </div>
+        """
+
+    return f"""
+    <div class="slide {active_class} flex-col items-center justify-center" data-duration="{dur_ms}">
+        {content}
+    </div>
+    """
+
 # --- UI STREAMLIT ---
-st.set_page_config(page_title="Gerador WebMotion", layout="wide")
-st.title("⚡ Ilha de Edição HTML5 - Modo Express")
-st.markdown("Chega de renderizar vídeo. O navegador faz o trabalho sujo e em tempo real.")
+st.set_page_config(page_title="WebMotion IA", layout="wide")
+st.title("🎨 Editor de Experiências HTML5")
+st.markdown("Transformando JSON em apresentações imersivas com sincronia de áudio.")
 
-json_input = st.text_area("Cole seu Roteiro JSON:", height=300, placeholder='{\n  "scenes": [\n    ...\n  ]\n}')
+# Carrega o roteiro de Inteligência Emocional por padrão
+with open("roteiro_ie.json", "r", encoding="utf-8") as f:
+    default_json = f.read()
 
-if st.button("🚀 Gerar Apresentação Animada", type="primary", use_container_width=True):
-    if not json_input.strip():
-        st.warning("Cadê o JSON, mestre?")
-        st.stop()
-        
+json_input = st.text_area("Roteiro JSON (Edite à vontade):", value=default_json, height=300)
+
+if st.button("🚀 Gerar Player Premium", type="primary", use_container_width=True):
     try:
         roteiro = json.loads(json_input)
     except Exception as e:
@@ -38,7 +107,7 @@ if st.button("🚀 Gerar Apresentação Animada", type="primary", use_container_
         st.stop()
 
     cleanup_temp()
-    st.info("Gerando vozes e calculando tempos milimétricos...")
+    st.info("A preparar os media e a construir os layouts dinâmicos...")
     
     audio_clips = []
     durations_ms = []
@@ -47,11 +116,9 @@ if st.button("🚀 Gerar Apresentação Animada", type="primary", use_container_
     progress_bar = st.progress(0)
     total_scenes = len(roteiro["scenes"])
     
-    # 1. PROCESSA ÁUDIO E GERA SLIDES HTML DINAMICAMENTE
     for idx, cena in enumerate(roteiro["scenes"]):
-        st.write(f"🎙️ Gravando cena {idx+1}...")
+        st.write(f"🎙️ A processar cena {idx+1}: {cena.get('overlay_text', 'Sem Título')}")
         
-        # Gera e mede o áudio
         audio_path = f"temp_files/audio_{idx}.mp3"
         asyncio.run(gen_audio(cena["text"], audio_path))
         clip = AudioFileClip(audio_path)
@@ -60,25 +127,10 @@ if st.button("🚀 Gerar Apresentação Animada", type="primary", use_container_
         dur_ms = int(clip.duration * 1000)
         durations_ms.append(dur_ms)
         
-        # Formata o texto para o HTML (Quebras de linha viram <br>)
-        title = cena.get("overlay_text", f"CENA {idx+1}").replace("\n", "<br>")
-        text = cena.get("text", "")
-        
-        # Monta o bloquinho do Slide
-        active_class = "active" if idx == 0 else ""
-        slides_html += f"""
-        <div class="slide {active_class} flex-col items-center text-center" data-duration="{dur_ms}">
-            <h2 class="text-5xl md:text-6xl font-black mb-8 uppercase text-white drop-shadow-[0_5px_15px_rgba(0,0,0,0.8)] leading-tight">{title}</h2>
-            <div class="glass-card p-6 md:p-8 rounded-3xl w-full max-w-3xl border-l-4 border-l-yellow-400">
-                <p class="text-xl md:text-2xl text-slate-200 font-light leading-relaxed">{text}</p>
-            </div>
-        </div>
-        """
+        slides_html += build_slide_html(idx, cena, dur_ms)
         progress_bar.progress((idx + 1) / total_scenes)
 
-    st.write("🔧 Compilando o Player Web...")
-    
-    # 2. CONCATENA O ÁUDIO E CONVERTE PRA BASE64
+    # Compila áudio final
     final_audio = concatenate_audioclips(audio_clips)
     final_audio_path = "temp_files/final_audio.mp3"
     final_audio.write_audiofile(final_audio_path, logger=None)
@@ -86,20 +138,18 @@ if st.button("🚀 Gerar Apresentação Animada", type="primary", use_container_
     with open(final_audio_path, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode('utf-8')
     
-    # 3. MONTA O HTML FINAL MESTRE
+    # HTML Master com Tailwind e Montserrat
     html_template = f"""
     <!DOCTYPE html>
-    <html lang="pt-br">
+    <html>
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
         <style>
             body {{
                 font-family: 'Montserrat', sans-serif;
-                background-color: #0f172a;
-                background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+                background: #020617;
                 color: white;
                 overflow: hidden;
                 margin: 0;
@@ -107,157 +157,107 @@ if st.button("🚀 Gerar Apresentação Animada", type="primary", use_container_
             }}
             .slide {{
                 display: none;
-                animation: slideIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                animation: slideIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
                 width: 100%;
-                justify-content: center;
+                height: 100%;
             }}
             .slide.active {{ display: flex; }}
             @keyframes slideIn {{
-                from {{ opacity: 0; transform: translateY(40px); }}
-                to {{ opacity: 1; transform: translateY(0); }}
-            }}
-            @keyframes slideOut {{
-                from {{ opacity: 1; transform: translateY(0); }}
-                to {{ opacity: 0; transform: translateY(-40px); }}
-            }}
-            .progress-segment {{
-                height: 6px;
-                background: rgba(255, 255, 255, 0.1);
-                flex: 1;
-                margin: 0 4px;
-                border-radius: 3px;
-                overflow: hidden;
-                position: relative;
-            }}
-            .progress-fill {{
-                height: 100%;
-                background: #facc15;
-                width: 0%;
+                from {{ opacity: 0; transform: scale(0.9) translateY(30px); filter: blur(10px); }}
+                to {{ opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }}
             }}
             .glass-card {{
-                background: rgba(255, 255, 255, 0.05);
-                backdrop-filter: blur(10px);
+                background: rgba(255, 255, 255, 0.03);
+                backdrop-filter: blur(12px);
                 border: 1px rgba(255, 255, 255, 0.1) solid;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             }}
-            #start-overlay {{
-                position: absolute; inset: 0; z-index: 50;
-                background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(5px);
-                display: flex; flex-direction: column; align-items: center; justify-content: center;
-            }}
+            .progress-segment {{ height: 6px; background: rgba(255, 255, 255, 0.1); flex: 1; margin: 0 4px; border-radius: 3px; overflow: hidden; }}
+            .progress-fill {{ height: 100%; background: #facc15; width: 0%; transition: width 0.1s linear; }}
+            #overlay {{ position: absolute; inset: 0; z-index: 100; background: rgba(2, 6, 23, 0.98); display: flex; align-items: center; justify-content: center; }}
         </style>
     </head>
-    <body class="flex flex-col items-center justify-center relative">
+    <body class="flex flex-col items-center justify-center p-10">
         
-        <!-- Bloqueio de Autoplay (Navegadores exigem clique pra tocar áudio) -->
-        <div id="start-overlay">
-            <h1 class="text-4xl font-black mb-6 uppercase tracking-widest text-yellow-400">Pronto para rodar</h1>
-            <button id="start-btn" class="px-8 py-4 bg-white text-slate-900 font-black rounded-full hover:bg-yellow-400 transition-all transform hover:scale-105 text-xl">
-                ▶ INICIAR APRESENTAÇÃO
+        <div id="overlay">
+            <button id="play-btn" class="px-12 py-6 bg-white text-black font-black rounded-full hover:scale-110 transition-transform text-2xl shadow-2xl shadow-white/10">
+                REPRODUZIR EXPERIÊNCIA
             </button>
         </div>
 
-        <audio id="narration" src="data:audio/mp3;base64,{audio_b64}"></audio>
+        <audio id="audio" src="data:audio/mp3;base64,{audio_b64}"></audio>
 
-        <div id="presentation-container" class="relative w-full max-w-5xl h-[600px] flex items-center justify-center px-6">
+        <div id="container" class="relative w-full h-full flex items-center justify-center">
             {slides_html}
         </div>
 
-        <div class="fixed bottom-8 left-0 right-0 px-8 max-w-5xl mx-auto w-full">
-            <div class="flex gap-2 w-full" id="progress-container"></div>
-            <div class="mt-4 flex justify-between items-center text-sm font-bold text-slate-400 uppercase tracking-widest">
-                <span>⚡ Apresentação Dinâmica</span>
-                <span id="timer-display">00:00</span>
+        <div class="fixed bottom-12 left-0 right-0 px-20 max-w-6xl mx-auto w-full">
+            <div class="flex gap-2" id="progress-bar"></div>
+            <div class="mt-4 flex justify-between text-xs font-black text-slate-500 uppercase tracking-[0.3em]">
+                <span>Inteligência Emocional • Masterclass</span>
+                <span id="timer">00:00</span>
             </div>
         </div>
 
         <script>
-            const audio = document.getElementById('narration');
-            const startBtn = document.getElementById('start-btn');
-            const overlay = document.getElementById('start-overlay');
+            const audio = document.getElementById('audio');
             const slides = document.querySelectorAll('.slide');
-            const progressContainer = document.getElementById('progress-container');
-            const timerDisplay = document.getElementById('timer-display');
-            
-            let currentSlide = 0;
-            const slideDurations = Array.from(slides).map(s => parseInt(s.dataset.duration));
-            const totalDuration = slideDurations.reduce((a, b) => a + b, 0);
-            
-            // Cria barras de progresso
+            const timer = document.getElementById('timer');
+            const bar = document.getElementById('progress-bar');
+            let current = 0;
+            const durations = Array.from(slides).map(s => parseInt(s.dataset.duration));
+
+            // Cria barras
             slides.forEach((_, i) => {{
-                const segment = document.createElement('div');
-                segment.className = 'progress-segment';
+                const seg = document.createElement('div');
+                seg.className = 'progress-segment';
                 const fill = document.createElement('div');
                 fill.className = 'progress-fill';
-                fill.id = `fill-${{i}}`;
-                segment.appendChild(fill);
-                progressContainer.appendChild(segment);
+                fill.id = 'f-' + i;
+                seg.appendChild(fill);
+                bar.appendChild(seg);
             }});
 
-            startBtn.addEventListener('click', () => {{
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.style.display = 'none', 300);
+            document.getElementById('play-btn').onclick = () => {{
+                document.getElementById('overlay').style.display = 'none';
                 audio.play();
-                requestAnimationFrame(update);
-            }});
+                update();
+            }};
 
             function update() {{
-                // SINCRONIA MAGISTRA: O tempo agora vem do áudio, não do relógio do PC!
-                const elapsed = audio.currentTime * 1000; 
+                const now = audio.currentTime * 1000;
                 
-                const secs = Math.floor(elapsed / 1000);
-                const ms = Math.floor((elapsed % 1000) / 10);
-                timerDisplay.textContent = `${{secs.toString().padStart(2, '0')}}:${{ms.toString().padStart(2, '0')}}`;
+                const s = Math.floor(now / 1000);
+                const ms = Math.floor((now % 1000) / 10);
+                timer.textContent = s.toString().padStart(2, '0') + ':' + ms.toString().padStart(2, '0');
 
-                let accumulatedTime = 0;
-                let targetSlide = 0;
+                let acc = 0;
+                let target = 0;
 
-                for(let i = 0; i < slideDurations.length; i++) {{
-                    const slideStart = accumulatedTime;
-                    const slideEnd = accumulatedTime + slideDurations[i];
+                for(let i=0; i<durations.length; i++) {{
+                    const start = acc;
+                    const end = acc + durations[i];
+                    const fill = document.getElementById('f-' + i);
                     
-                    const fillElement = document.getElementById(`fill-${{i}}`);
-                    if (elapsed >= slideEnd) {{
-                        fillElement.style.width = '100%';
-                    }} else if (elapsed >= slideStart) {{
-                        const slideProgress = ((elapsed - slideStart) / slideDurations[i]) * 100;
-                        fillElement.style.width = `${{slideProgress}}%`;
-                        targetSlide = i;
-                    }} else {{
-                        fillElement.style.width = '0%';
-                    }}
-                    accumulatedTime = slideEnd;
+                    if (now >= end) fill.style.width = '100%';
+                    else if (now >= start) {{
+                        fill.style.width = ((now - start) / durations[i] * 100) + '%';
+                        target = i;
+                    }} else fill.style.width = '0%';
+                    acc = end;
                 }}
 
-                if (targetSlide !== currentSlide && targetSlide < slides.length) {{
-                    changeSlide(targetSlide);
+                if (target !== current) {{
+                    slides[current].classList.remove('active');
+                    current = target;
+                    slides[current].classList.add('active');
                 }}
 
-                if (!audio.ended) {{
-                    requestAnimationFrame(update);
-                }}
-            }}
-
-            function changeSlide(index) {{
-                slides[currentSlide].classList.remove('active');
-                slides[currentSlide].style.animation = 'slideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards';
-                
-                const oldIndex = currentSlide;
-                currentSlide = index;
-                
-                setTimeout(() => {{
-                    slides[oldIndex].style.display = 'none';
-                    slides[currentSlide].style.display = 'flex';
-                    slides[currentSlide].style.animation = 'slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards';
-                    slides[currentSlide].classList.add('active');
-                }}, 400);
+                if (!audio.ended) requestAnimationFrame(update);
             }}
         </script>
     </body>
     </html>
     """
     
-    st.success("✅ Player compilado com sucesso!")
-    
-    # Roda o HTML inteiro dentro do Streamlit, simulando uma tela de 800px de altura
-    components.html(html_template, height=800, scrolling=False)
+    st.success("✅ Player Dinâmico Gerado!")
+    components.html(html_template, height=850, scrolling=False)
