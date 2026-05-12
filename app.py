@@ -42,49 +42,56 @@ def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
             st.error(f"Falha na simulação MoviePy: {e}")
             return False
 
-    # MODO REAL (CHAMADA DE API)
+    # MODO REAL (CHAMADA DE API SILICONFLOW - WAN 2.1)
     headers = {
-        "Authorization": f"Token {api_key}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
-    url = "https://api.replicate.com/v1/predictions"
     
-    # Modelo atualizado (Deforum/SVD ou Zeroscope) - Certifique-se de que o input format bata
+    # Endpoint de Text-to-Video da SiliconFlow
+    url_submit = "https://api.siliconflow.cn/v1/video/submit"
+    
+    # Payload configurado especificamente para o modelo Wan
     data = {
-        "version": "9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351",
-        "input": {
-            "prompt": prompt,
-            "num_frames": 24,
-            "fps": 8
-        }
+        "model": "alibaba/wan-2.1-t2v", # ID oficial do modelo Wan 2.1 na SiliconFlow
+        "prompt": prompt,
+        "resolution": "1280x720" # Wan geralmente utiliza resolution
     }
 
     try:
-        st.write("Conectando aos servidores do Replicate...")
-        response_post = requests.post(url, headers=headers, json=data)
+        st.write("Conectando aos servidores da SiliconFlow (Modelo Wan 2.1)...")
+        response_post = requests.post(url_submit, headers=headers, json=data)
         
-        if response_post.status_code != 201:
-            st.error(f"O Replicate recusou o pedido. Código {response_post.status_code}. Detalhes: {response_post.text}")
+        if response_post.status_code != 200:
+            st.error(f"A SiliconFlow recusou o pedido. Código {response_post.status_code}. Detalhes: {response_post.text}")
             return False
             
-        response = response_post.json()
-        prediction_url = response["urls"]["get"]
+        response_json = response_post.json()
+        task_id = response_json.get("data", {}).get("task_id")
+        
+        if not task_id:
+             st.error("Não foi possível obter o task_id da resposta.")
+             return False
 
-        st.write("Aguardando renderização na nuvem...")
+        status_url = "https://api.siliconflow.cn/v1/video/status"
+        
+        st.write("Aguardando renderização do Wan na nuvem (Isso pode levar uns minutos)...")
         while True:
-            status_response = requests.get(prediction_url, headers=headers).json()
-            status = status_response["status"]
-            if status == "succeeded":
-                # O Zeroscope às vezes retorna uma lista de URLs, pegamos a primeira
-                video_url = status_response["output"]
-                if isinstance(video_url, list):
-                     video_url = video_url[0]
+            # Check status enviando via POST (Padrão de algumas rotas assíncronas da SF)
+            status_data = {"task_id": task_id}
+            status_response = requests.post(status_url, headers=headers, json=status_data).json()
+            
+            status = status_response.get("data", {}).get("status")
+            
+            if status == "SUCCESS":
+                video_url = status_response.get("data", {}).get("video_url")
                 break
-            elif status == "failed":
-                erro_detalhado = status_response.get("error", "Erro desconhecido na geração do Replicate.")
+            elif status == "FAILED":
+                erro_detalhado = status_response.get("data", {}).get("reason", "Erro desconhecido na geração.")
                 st.error(f"Falha ao gerar o vídeo na API. Motivo: {erro_detalhado}")
                 return False
-            time.sleep(3)
+            
+            time.sleep(5) # Polling a cada 5 segundos
         
         st.write("Fazendo download do vídeo gerado...")
         video_data = requests.get(video_url).content
@@ -102,11 +109,11 @@ def gerar_video(prompt, output_filename, api_key, duration_fallback=5):
 
 st.set_page_config(page_title="Auto-Studio IA", page_icon="🎬", layout="wide")
 
-st.title("🎬 Orquestrador de Vídeo 100% IA")
+st.title("🎬 Orquestrador de Vídeo 100% IA (Wan 2.1 Edition)")
 
 with st.sidebar:
     st.header("⚙️ Configurações")
-    replicate_key = st.text_input("Replicate API Key", type="password", help="Deixe em branco para rodar a simulação.")
+    replicate_key = st.text_input("SiliconFlow API Key", type="password", help="Deixe em branco para rodar a simulação.")
     voz_escolhida = st.selectbox("Voz", options=["pt-BR-AntonioNeural", "pt-BR-FranciscaNeural"])
 
 st.subheader("📝 Seu Roteiro (JSON)")
