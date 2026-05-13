@@ -7,3 +7,4 @@ numpy
 imageio
 decorator
 imageio-ffmpeg
+elevenlabs
