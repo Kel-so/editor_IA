@@ -366,6 +366,235 @@ def build_luminal_slide(slide_data, total_index):
     """
 
 # ==========================================
+# MOTOR DO EDITOR CLÁSSICO HTML (Aba 1)
+# ==========================================
+def render_html_player(scenes, tts_config, brand_config):
+    audio_srcs = []
+    slides_html = ""
+    progress = st.progress(0)
+    
+    st.write("🎙️ Gerando Áudios...")
+    for i, scene in enumerate(scenes):
+        path = f"temp_files/audio_{i}.mp3"
+        gen_audio_sync(scene.get("narration_text", "Texto não encontrado"), path, tts_config)
+        
+        with open(path, "rb") as f:
+            audio_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+            audio_srcs.append(audio_b64)
+            
+        slides_html += build_luminal_slide(scene, i)
+        progress.progress((i+1)/len(scenes))
+
+    st.write("🎬 Compilando Apresentação em Tela Cheia...")
+
+    html_code = f"""
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+        <script>
+            tailwind.config = {{ 
+                theme: {{ 
+                    extend: {{ 
+                        colors: {{ brand: '{brand_config["color"]}' }} 
+                    }} 
+                }} 
+            }}
+        </script>
+        <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap)" rel="stylesheet">
+        <style>
+            :root {{ 
+                --primary: {brand_config["color"]}; 
+                --bg-dark: #020617; 
+            }}
+            body {{ 
+                font-family: 'Inter', sans-serif; 
+                overflow: hidden; 
+                background: var(--bg-dark); 
+                color: white; 
+                margin: 0; 
+            }}
+            .slide {{ 
+                position: absolute; 
+                inset: 0; 
+                opacity: 0; 
+                visibility: hidden; 
+                transition: opacity 0.8s, visibility 0.8s; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                padding: 2rem; 
+            }}
+            .slide.active {{ 
+                opacity: 1; 
+                visibility: visible; 
+            }}
+            .bg-container {{ 
+                position: absolute; 
+                inset: 0; 
+                z-index: -1; 
+                overflow: hidden; 
+            }}
+            .bg-container img {{ 
+                width: 100%; 
+                height: 100%; 
+                object-fit: cover; 
+                filter: blur(25px) brightness(0.4); 
+                transform: scale(1.1); 
+                transition: transform 12s linear; 
+            }}
+            .active .bg-container img {{ 
+                transform: scale(1.3); 
+            }}
+            .glass-card {{ 
+                background: rgba(255, 255, 255, 0.03); 
+                backdrop-filter: blur(12px); 
+                border: 1px solid rgba(255, 255, 255, 0.08); 
+                border-radius: 32px; 
+                padding: 3rem; 
+            }}
+            .animate-up {{ 
+                transform: translateY(50px); 
+                opacity: 0; 
+                transition: all 1s cubic-bezier(0.22, 1, 0.36, 1); 
+            }}
+            .animate-in {{ 
+                transform: scale(0.9); 
+                opacity: 0; 
+                transition: all 1s cubic-bezier(0.22, 1, 0.36, 1); 
+            }}
+            .active .animate-up, .active .animate-in {{ 
+                transform: translateY(0) scale(1); 
+                opacity: 1; 
+            }}
+            .delay-1 {{ transition-delay: 0.2s; }} 
+            .delay-2 {{ transition-delay: 0.5s; }} 
+            .delay-3 {{ transition-delay: 0.8s; }} 
+            .delay-4 {{ transition-delay: 1.1s; }}
+            #progress-fill {{ 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                height: 4px; 
+                background: linear-gradient(90deg, var(--primary), #ffffff); 
+                width: 0%; 
+                transition: width 0.3s linear; 
+                box-shadow: 0 0 10px var(--primary); 
+                z-index: 100;
+            }}
+            .overlay-screen {{ 
+                position: fixed; 
+                inset: 0; 
+                z-index: 999; 
+                background: #020617; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+            }}
+            .blur-bg {{ 
+                background: rgba(2, 6, 23, 0.85); 
+                backdrop-filter: blur(15px); 
+            }}
+        </style>
+    </head>
+    <body>
+        <div id="start-overlay" class="overlay-screen">
+            <button onclick="startPresentation()" class="px-16 py-8 bg-brand text-black font-black rounded-full hover:scale-105 transition-all text-2xl shadow-[0_0_50px_var(--primary)]">
+                INICIAR APRESENTAÇÃO
+            </button>
+        </div>
+        
+        <div id="replay-overlay" class="overlay-screen blur-bg" style="display: none;">
+            <div class="text-center">
+                <h2 class="text-5xl font-black mb-10 text-white">Apresentação Concluída</h2>
+                <button onclick="replayPresentation()" class="px-12 py-6 bg-brand text-black font-black rounded-full hover:scale-105 transition-all text-xl shadow-[0_0_30px_var(--primary)]">
+                    🔄 REPLAY
+                </button>
+            </div>
+        </div>
+        
+        <div id="progress-fill"></div>
+        
+        <header class="fixed top-10 left-10 z-50 flex items-center gap-6">
+            {brand_config["logo"]}
+            <div>
+                <div class="text-[10px] font-bold tracking-[0.5em] uppercase opacity-40">{brand_config["header_top"]}</div>
+                <div class="text-sm font-medium text-brand">{brand_config["header_bottom"]}</div>
+            </div>
+        </header>
+        
+        <audio id="audio"></audio>
+        
+        <main class="relative h-screen w-full overflow-hidden">
+            {slides_html}
+        </main>
+        
+        <script>
+            const audioSrcs = {json.dumps(audio_srcs)};
+            const audio = document.getElementById('audio');
+            const slides = document.querySelectorAll('.slide');
+            let currentSlide = 0;
+            let playTimeout;
+
+            function playAudioFadeIn(src) {{
+                audio.src = src;
+                audio.volume = 0; 
+                audio.play();
+                let vol = 0;
+                let fade = setInterval(() => {{
+                    if (vol < 0.6) {{ 
+                        vol += 0.05; 
+                        audio.volume = vol; 
+                    }} else {{ 
+                        clearInterval(fade); 
+                    }}
+                }}, 50);
+            }}
+
+            function playScene() {{
+                if(currentSlide >= audioSrcs.length) {{
+                    document.getElementById('replay-overlay').style.display = 'flex';
+                    return;
+                }}
+                
+                // Muda o slide
+                slides.forEach(s => s.classList.remove('active'));
+                if(slides[currentSlide]) slides[currentSlide].classList.add('active');
+                
+                // Atualiza Barra de Progresso
+                document.getElementById('progress-fill').style.width = ((currentSlide / audioSrcs.length) * 100) + '%';
+
+                // Toca o áudio e espera ele fisicamente acabar
+                playAudioFadeIn(audioSrcs[currentSlide]);
+                
+                audio.onended = () => {{
+                    currentSlide++;
+                    document.getElementById('progress-fill').style.width = ((currentSlide / audioSrcs.length) * 100) + '%';
+                    playTimeout = setTimeout(playScene, 1000); 
+                }};
+            }}
+
+            function startPresentation() {{ 
+                document.getElementById('start-overlay').style.display = 'none'; 
+                currentSlide = 0;
+                clearTimeout(playTimeout);
+                playScene(); 
+            }}
+            
+            function replayPresentation() {{ 
+                document.getElementById('replay-overlay').style.display = 'none'; 
+                currentSlide = 0;
+                clearTimeout(playTimeout);
+                playScene(); 
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=850, scrolling=False)
+
+# ==========================================
 # MOTOR DA SUPER AULA (COMPILADOR HTML/JS MONOLÍTICO)
 # Serve tanto para Aba 1 (Gerada) quanto Aba 2 (Hardcoded)
 # ==========================================
@@ -375,10 +604,6 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     st.write("⚙️ Compilando Inteligência da Super Aula...")
     progress = st.progress(0)
     cleanup_temp()
-
-    # O Respiro Mágico de 1 Segundo entre cenas de um mesmo bloco de vídeo
-    silence_array = np.zeros((44100, 2))
-    silence_clip = AudioArrayClip(silence_array, fps=44100)
 
     end_p = f"temp_files/sa_final_end.mp3"
     gen_audio_sync("Parabéns! Você concluiu essa jornada com excelência. O conhecimento agora é seu.", end_p, tts_config)
@@ -418,8 +643,20 @@ def render_super_aula_html(course_data, tts_config, brand_config):
         elif block["type"] == "quiz":
             qs = []
             
-            intros_suc = ["Exatamente!", "Na mosca!", "Perfeito!", "Cirúrgico.", "Mandou muito bem!"]
-            intros_err = ["Ops, não é bem por aí.", "Escorregou feio nessa.", "Não foi dessa vez.", "Quase, mas a lógica falhou.", "Incorreto. A memória te traiu dessa vez."]
+            intros_suc = [
+                "Exatamente!", 
+                "Na mosca!", 
+                "Perfeito!", 
+                "Cirúrgico.", 
+                "Mandou muito bem!"
+            ]
+            intros_err = [
+                "Ops, não é bem por aí.", 
+                "Escorregou feio nessa.", 
+                "Não foi dessa vez.", 
+                "Quase, mas a lógica falhou.", 
+                "Incorreto. A memória te traiu dessa vez."
+            ]
             
             for q_idx, q in enumerate(block["questions"]):
                 # Feedbacks Inteligentes (Baseados no JSON Gerado/Hardcoded)
@@ -487,51 +724,174 @@ def render_super_aula_html(course_data, tts_config, brand_config):
         </script>
         <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap)" rel="stylesheet">
         <style>
-            :root {{ --primary: {brand_config["color"]}; --bg-dark: #020617; }}
-            body {{ font-family: 'Inter', sans-serif; background: var(--bg-dark); color: white; overflow: hidden; margin: 0; }}
-            .slide {{ position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 0.8s; display: flex; align-items: center; justify-content: center; padding: 2rem; }}
-            .slide.active {{ opacity: 1; visibility: visible; }}
-            .bg-container {{ position: absolute; inset: 0; z-index: -1; }}
-            .bg-container img {{ width: 100%; height: 100%; object-fit: cover; filter: blur(25px) brightness(0.35); transition: 10s linear; }}
-            .active .bg-container img {{ transform: scale(1.2); }}
-            .glass-card {{ background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); border-radius: 32px; padding: 3rem; }}
-            .animate-up {{ transform: translateY(40px); opacity: 0; transition: 1s cubic-bezier(0.2,1,0.3,1); }}
-            .active .animate-up {{ transform: translateY(0); opacity: 1; }}
-            #progress-fill {{ position: fixed; top: 0; left: 0; height: 4px; background: var(--primary); width: 0%; transition: width 0.3s linear; z-index: 1000; box-shadow: 0 0 10px var(--primary);}}
-            .overlay {{ position: fixed; inset: 0; z-index: 999; background: #020617; display: flex; align-items: center; justify-content: center; flex-direction: column; }}
-            .quiz-btn {{ border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; }}
-            .quiz-btn:hover:not(:disabled) {{ border-color: var(--primary); background: rgba(255,255,255,0.1); transform: scale(1.02); }}
-            .btn-shake {{ animation: shake 0.5s; border-color: #ef4444 !important; background: rgba(239,68,68,0.2) !important;}}
-            .btn-pulse {{ animation: pulse 1s infinite; border-color: #22c55e !important; background: rgba(34,197,94,0.2) !important;}}
-            @keyframes shake {{ 0%, 100% {{ transform: translateX(0); }} 20%, 60% {{ transform: translateX(-8px); }} 40%, 80% {{ transform: translateX(8px); }} }}
-            @keyframes popIn {{ 0% {{ transform: scale(0.8) translateY(30px); opacity: 0; }} 100% {{ transform: scale(1) translateY(0); opacity: 1; }} }}
-            @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }} 70% {{ box-shadow: 0 0 0 20px rgba(34,197,94,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(34,197,94,0); }} }}
-            .anim-pop {{ animation: popIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }}
+            :root {{ 
+                --primary: {brand_config["color"]}; 
+                --bg-dark: #020617; 
+            }}
+            body {{ 
+                font-family: 'Inter', sans-serif; 
+                background: var(--bg-dark); 
+                color: white; 
+                overflow: hidden; 
+                margin: 0; 
+            }}
+            .slide {{ 
+                position: absolute; 
+                inset: 0; 
+                opacity: 0; 
+                visibility: hidden; 
+                transition: opacity 0.8s; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                padding: 2rem; 
+            }}
+            .slide.active {{ 
+                opacity: 1; 
+                visibility: visible; 
+            }}
+            .bg-container {{ 
+                position: absolute; 
+                inset: 0; 
+                z-index: -1; 
+            }}
+            .bg-container img {{ 
+                width: 100%; 
+                height: 100%; 
+                object-fit: cover; 
+                filter: blur(25px) brightness(0.35); 
+                transition: 10s linear; 
+            }}
+            .active .bg-container img {{ 
+                transform: scale(1.2); 
+            }}
+            .glass-card {{ 
+                background: rgba(255,255,255,0.03); 
+                backdrop-filter: blur(12px); 
+                border: 1px solid rgba(255,255,255,0.1); 
+                border-radius: 32px; 
+                padding: 3rem; 
+            }}
+            .animate-up {{ 
+                transform: translateY(40px); 
+                opacity: 0; 
+                transition: 1s cubic-bezier(0.2,1,0.3,1); 
+            }}
+            .active .animate-up {{ 
+                transform: translateY(0); 
+                opacity: 1; 
+            }}
+            #progress-fill {{ 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                height: 4px; 
+                background: var(--primary); 
+                width: 0%; 
+                transition: width 0.3s linear; 
+                z-index: 1000; 
+                box-shadow: 0 0 10px var(--primary);
+            }}
+            .overlay {{ 
+                position: fixed; 
+                inset: 0; 
+                z-index: 999; 
+                background: #020617; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                flex-direction: column; 
+            }}
+            .quiz-btn {{ 
+                border: 1px solid rgba(255,255,255,0.1); 
+                cursor: pointer; 
+                transition: 0.2s; 
+            }}
+            .quiz-btn:hover:not(:disabled) {{ 
+                border-color: var(--primary); 
+                background: rgba(255,255,255,0.1); 
+                transform: scale(1.02); 
+            }}
+            .btn-shake {{ 
+                animation: shake 0.5s; 
+                border-color: #ef4444 !important; 
+                background: rgba(239,68,68,0.2) !important;
+            }}
+            .btn-pulse {{ 
+                animation: pulse 1s infinite; 
+                border-color: #22c55e !important; 
+                background: rgba(34,197,94,0.2) !important;
+            }}
+            @keyframes shake {{ 
+                0%, 100% {{ transform: translateX(0); }} 
+                20%, 60% {{ transform: translateX(-8px); }} 
+                40%, 80% {{ transform: translateX(8px); }} 
+            }}
+            @keyframes popIn {{ 
+                0% {{ transform: scale(0.8) translateY(30px); opacity: 0; }} 
+                100% {{ transform: scale(1) translateY(0); opacity: 1; }} 
+            }}
+            @keyframes pulse {{ 
+                0% {{ box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }} 
+                70% {{ box-shadow: 0 0 0 20px rgba(34,197,94,0); }} 
+                100% {{ box-shadow: 0 0 0 0 rgba(34,197,94,0); }} 
+            }}
+            .anim-pop {{ 
+                animation: popIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; 
+            }}
         </style>
     </head>
     <body>
         <div id="progress-fill"></div>
-        <div id="start-overlay" class="overlay"><button onclick="start()" class="px-16 py-8 bg-brand text-black font-black rounded-full text-2xl shadow-[0_0_50px_brand]">INICIAR SUPER AULA</button></div>
-        <div id="end-overlay" class="overlay" style="display:none; background: rgba(2,6,23,0.9); backdrop-filter: blur(20px);"><h2 class="text-6xl font-black mb-12 text-white">Masterclass Concluída!</h2><button onclick="location.reload()" class="px-12 py-6 bg-brand text-black font-black rounded-full">🔄 REINICIAR</button></div>
+        
+        <div id="start-overlay" class="overlay">
+            <button onclick="start()" class="px-16 py-8 bg-brand text-black font-black rounded-full text-2xl shadow-[0_0_50px_brand]">
+                INICIAR SUPER AULA
+            </button>
+        </div>
+        
+        <div id="end-overlay" class="overlay" style="display:none; background: rgba(2,6,23,0.9); backdrop-filter: blur(20px);">
+            <h2 class="text-6xl font-black mb-12 text-white">Masterclass Concluída!</h2>
+            <button onclick="location.reload()" class="px-12 py-6 bg-brand text-black font-black rounded-full">
+                🔄 REINICIAR
+            </button>
+        </div>
         
         <div id="quiz-overlay" class="overlay" style="display:none; background: rgba(2,6,23,0.9); backdrop-filter: blur(20px);">
             <div id="quiz-content" class="max-w-4xl w-full px-8">
-                <div class="inline-block px-4 py-1 rounded-full bg-brand/20 border border-brand/30 text-brand text-xs font-black tracking-widest uppercase mb-6 flex justify-between w-full"><span>⚡ DESAFIO</span><span id="quiz-progress-text"></span></div>
-                <h2 id="q-txt" class="text-4xl font-black mb-10 leading-tight">Pergunta...</h2><div id="q-opts" class="space-y-4"></div>
+                <div class="inline-block px-4 py-1 rounded-full bg-brand/20 border border-brand/30 text-brand text-xs font-black tracking-widest uppercase mb-6 flex justify-between w-full">
+                    <span>⚡ DESAFIO</span>
+                    <span id="quiz-progress-text"></span>
+                </div>
+                <h2 id="q-txt" class="text-4xl font-black mb-10 leading-tight">Pergunta...</h2>
+                <div id="q-opts" class="space-y-4"></div>
             </div>
         </div>
 
+        <!-- LAYER DO GAME (IFRAME EM TELA CHEIA POR CIMA) -->
         <div id="game-overlay" class="overlay" style="display:none; background: #000; z-index: 1000;">
             <div class="absolute top-6 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-4 bg-black/80 p-4 rounded-full border border-white/10">
                 <span class="text-brand font-bold uppercase" id="game-title">SIMULADOR</span>
-                <button onclick="finishGame()" class="px-6 py-2 bg-brand text-black font-bold rounded-full text-sm hover:scale-105 transition-all">FINALIZAR GAME</button>
+                <button onclick="finishGame()" class="px-6 py-2 bg-brand text-black font-bold rounded-full text-sm hover:scale-105 transition-all">
+                    FINALIZAR GAME
+                </button>
             </div>
             <iframe id="game-frame" src="" class="w-full h-full border-none"></iframe>
         </div>
 
-        <header class="fixed top-10 left-10 z-50 flex items-center gap-6">{brand_config["logo"]}<div><div class="text-[10px] font-bold uppercase opacity-40">{brand_config["header_top"]}</div><div class="text-sm font-medium text-brand">{brand_config["header_bottom"]}</div></div></header>
+        <header class="fixed top-10 left-10 z-50 flex items-center gap-6">
+            {brand_config["logo"]}
+            <div>
+                <div class="text-[10px] font-bold uppercase opacity-40">{brand_config["header_top"]}</div>
+                <div class="text-sm font-medium text-brand">{brand_config["header_bottom"]}</div>
+            </div>
+        </header>
+        
         <audio id="aud"></audio>
-        <main id="video-container" class="relative h-screen w-full overflow-hidden">{html_layers}</main>
+        
+        <main id="video-container" class="relative h-screen w-full overflow-hidden">
+            {html_layers}
+        </main>
 
         <script>
             const data = {json.dumps(js_course_data)}; 
@@ -540,14 +900,39 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             let current = 0; 
             let playTimeout;
 
+            // Fades de áudio com limite de volume em 60%
             function playAudioFadeIn(src) {{
-                aud.src = src; aud.volume = 0; aud.play();
-                let vol = 0; let fade = setInterval(() => {{ if (vol < 0.6) {{ vol += 0.05; aud.volume = vol; }} else {{ clearInterval(fade); }} }}, 50);
+                aud.src = src; 
+                aud.volume = 0; 
+                aud.play();
+                let vol = 0; 
+                let fade = setInterval(() => {{ 
+                    if (vol < 0.6) {{ 
+                        vol += 0.05; 
+                        aud.volume = vol; 
+                    }} else {{ 
+                        clearInterval(fade); 
+                    }} 
+                }}, 50);
             }}
 
-            function start() {{ document.getElementById('start-overlay').style.display = 'none'; current = 0; clearTimeout(playTimeout); playStep(); }}
-            function nextStep() {{ current++; playTimeout = setTimeout(playStep, 1000); }}
-            function finishGame() {{ document.getElementById('game-overlay').style.display = 'none'; document.getElementById('game-frame').src = ""; nextStep(); }}
+            function start() {{ 
+                document.getElementById('start-overlay').style.display = 'none'; 
+                current = 0;
+                clearTimeout(playTimeout);
+                playStep(); 
+            }}
+            
+            function nextStep() {{ 
+                current++; 
+                playTimeout = setTimeout(playStep, 1000); 
+            }}
+            
+            function finishGame() {{ 
+                document.getElementById('game-overlay').style.display = 'none'; 
+                document.getElementById('game-frame').src = ""; 
+                nextStep(); 
+            }}
 
             function playStep() {{
                 clearTimeout(playTimeout);
@@ -555,15 +940,22 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                 document.getElementById('game-overlay').style.display = 'none';
                 document.querySelectorAll('.video-layer').forEach(l => l.style.display = 'none');
 
-                if(current >= data.length) {{ document.getElementById('end-overlay').style.display = 'flex'; playAudioFadeIn(endAudio); return; }}
+                if(current >= data.length) {{ 
+                    document.getElementById('end-overlay').style.display = 'flex'; 
+                    playAudioFadeIn(endAudio); 
+                    return; 
+                }}
 
                 const step = data[current];
                 if(step.type === 'video') {{
-                    const layer = document.getElementById(step.layer_id); layer.style.display = 'block';
+                    const layer = document.getElementById(step.layer_id); 
+                    layer.style.display = 'block';
                     runVideoSequential(step, layer);
+                
                 }} else if(step.type === 'quiz') {{
                     document.getElementById('progress-fill').style.width = '100%';
                     showQuiz(step, 0);
+                
                 }} else if(step.type === 'game') {{
                     document.getElementById('game-overlay').style.display = 'flex';
                     document.getElementById('game-title').innerText = step.title;
@@ -572,12 +964,19 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             }}
 
             function runVideoSequential(step, layer) {{
-                const slides = layer.querySelectorAll('.slide'); let sceneIdx = 0;
+                const slides = layer.querySelectorAll('.slide'); 
+                let sceneIdx = 0;
+                
                 function playNextScene() {{
-                    if (sceneIdx >= step.audio_srcs.length) {{ nextStep(); return; }}
+                    if (sceneIdx >= step.audio_srcs.length) {{
+                        nextStep();
+                        return;
+                    }}
+                    
                     slides.forEach(s => s.classList.remove('active'));
                     if(slides[sceneIdx]) slides[sceneIdx].classList.add('active');
                     
+                    // Atualiza a barra de progresso suavemente
                     let baseProg = (current / data.length);
                     let sceneProg = (sceneIdx / step.audio_srcs.length) * (1 / data.length);
                     document.getElementById('progress-fill').style.width = ((baseProg + sceneProg) * 100) + '%';
@@ -595,14 +994,19 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             }}
 
             function showQuiz(step, qIdx) {{
-                const qc = document.getElementById('quiz-overlay'); qc.style.display = 'flex';
+                const qc = document.getElementById('quiz-overlay'); 
+                qc.style.display = 'flex';
                 const content = document.getElementById('quiz-content');
-                content.style.animation = 'none'; void content.offsetWidth; content.style.animation = 'popIn 0.7s forwards';
+                content.style.animation = 'none'; 
+                void content.offsetWidth; 
+                content.style.animation = 'popIn 0.7s forwards';
                 
                 const q = step.questions[qIdx];
                 document.getElementById('quiz-progress-text').innerText = `Pergunta ${{qIdx+1}}/${{step.questions.length}}`;
                 document.getElementById('q-txt').innerText = q.question;
-                const opts = document.getElementById('q-opts'); opts.innerHTML = '';
+                
+                const opts = document.getElementById('q-opts'); 
+                opts.innerHTML = '';
                 
                 q.options.forEach((opt, i) => {{
                     const btn = document.createElement('button');
@@ -614,18 +1018,34 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                         const ind = btn.querySelector('.indicator');
                         
                         if(i === q.answer_idx) {{
-                            btn.classList.add('btn-pulse'); ind.innerText = "✅";
+                            btn.classList.add('btn-pulse'); 
+                            ind.innerText = "✅";
+                            
+                            // Toca a explicação de sucesso
                             playAudioFadeIn(q.audio_success); 
+                            
                             aud.onended = () => {{ 
-                                aud.onended = null; btn.classList.remove('btn-pulse'); 
-                                if(qIdx+1 < step.questions.length) showQuiz(step, qIdx+1); else nextStep(); 
+                                aud.onended = null; 
+                                btn.classList.remove('btn-pulse'); 
+                                if(qIdx+1 < step.questions.length) {{
+                                    showQuiz(step, qIdx+1); 
+                                }} else {{
+                                    nextStep(); 
+                                }}
                             }};
                         }} else {{
-                            btn.classList.add('btn-shake'); ind.innerText = "❌";
+                            btn.classList.add('btn-shake'); 
+                            ind.innerText = "❌";
+                            
+                            // Toca uma dica de erro sorteada
                             const randomErr = q.audio_errors[Math.floor(Math.random() * q.audio_errors.length)];
                             playAudioFadeIn(randomErr); 
+                            
                             aud.onended = () => {{ 
-                                aud.onended = null; document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = false); btn.classList.remove('btn-shake'); ind.innerText = ""; 
+                                aud.onended = null; 
+                                document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = false); 
+                                btn.classList.remove('btn-shake'); 
+                                ind.innerText = ""; 
                             }};
                         }}
                     }};
