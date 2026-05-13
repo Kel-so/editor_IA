@@ -92,7 +92,7 @@ def gen_audio_sync(text, filepath, tts_config):
             audio_generator = client.text_to_speech.convert(
                 text=clean_text, 
                 voice_id=voice_id, 
-                model_id="eleven_turbo_v2_5", 
+                model_id="eleven_multilingual_v2", 
                 output_format="mp3_44100_128"
             )
             with open(filepath, "wb") as f:
