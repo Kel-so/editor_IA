@@ -325,38 +325,26 @@ def build_luminal_slide(slide_data, total_index):
 
 # ==========================================
 # MOTOR DO EDITOR CLÁSSICO HTML (Aba 1)
+# Agora SEM MoviePy: Toca nativo com array JS para evitar cortes
 # ==========================================
 def render_html_player(scenes, tts_config, brand_config):
-    audio_clips = []
+    audio_srcs = []
     slides_html = ""
-    durations = []
     progress = st.progress(0)
     
-    # Criador de silencio fisico (1 segundo) para evitar cortes
-    silence_array = np.zeros((44100, 2))
-    silence_clip = AudioArrayClip(silence_array, fps=44100)
-    
+    st.write("🎙️ Gerando Áudios...")
     for i, scene in enumerate(scenes):
-        st.write(f"🎙️ Processando Cena {i+1}/{len(scenes)}...")
         path = f"temp_files/audio_{i}.mp3"
         gen_audio_sync(scene.get("narration_text", "Texto não encontrado"), path, tts_config)
         
-        clip = AudioFileClip(path)
-        audio_clips.append(clip)
-        audio_clips.append(silence_clip) # Injeta 1s de silêncio obrigatório
-        
-        slides_html += build_luminal_slide(scene, i)
-        # O slide dura o tempo do áudio + 1s do silêncio
-        durations.append(int(clip.duration * 1000) + 1000) 
+        with open(path, "rb") as f:
+            audio_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+            audio_srcs.append(audio_b64)
             
+        slides_html += build_luminal_slide(scene, i)
         progress.progress((i+1)/len(scenes))
 
-    st.write("🎬 Compilando Apresentação...")
-    final_audio = concatenate_audioclips(audio_clips)
-    final_audio.write_audiofile("temp_files/final_classic.mp3", logger=None)
-    
-    with open("temp_files/final_classic.mp3", "rb") as f:
-        audio_b64 = base64.b64encode(f.read()).decode('utf-8')
+    st.write("🎬 Compilando Apresentação em Tela Cheia...")
 
     html_code = f"""
     <!DOCTYPE html>
@@ -495,20 +483,21 @@ def render_html_player(scenes, tts_config, brand_config):
             </div>
         </header>
         
-        <audio id="audio" src="data:audio/mp3;base64,{audio_b64}"></audio>
+        <audio id="audio"></audio>
         
         <main class="relative h-screen w-full overflow-hidden">
             {slides_html}
         </main>
         
         <script>
+            const audioSrcs = {json.dumps(audio_srcs)};
             const audio = document.getElementById('audio');
             const slides = document.querySelectorAll('.slide');
-            const durations = {json.dumps(durations)};
-            let currentSlide = -1;
-            let animationFrameId;
+            let currentSlide = 0;
+            let playTimeout;
 
-            function playWithFadeIn() {{
+            function playAudioFadeIn(src) {{
+                audio.src = src;
                 audio.volume = 0; 
                 audio.play();
                 let vol = 0;
@@ -522,51 +511,42 @@ def render_html_player(scenes, tts_config, brand_config):
                 }}, 50);
             }}
 
+            function playScene() {{
+                if(currentSlide >= audioSrcs.length) {{
+                    document.getElementById('replay-overlay').style.display = 'flex';
+                    return;
+                }}
+                
+                // Transição de Slide
+                slides.forEach(s => s.classList.remove('active'));
+                if(slides[currentSlide]) slides[currentSlide].classList.add('active');
+                
+                // Barra de Progresso
+                document.getElementById('progress-fill').style.width = ((currentSlide / audioSrcs.length) * 100) + '%';
+                
+                // Dá o Play no Áudio correspondente
+                playAudioFadeIn(audioSrcs[currentSlide]);
+                
+                // Só muda de slide quando o áudio terminar nativamente + 1s respiro
+                audio.onended = () => {{
+                    currentSlide++;
+                    document.getElementById('progress-fill').style.width = ((currentSlide / audioSrcs.length) * 100) + '%';
+                    playTimeout = setTimeout(playScene, 1000); 
+                }};
+            }}
+
             function startPresentation() {{ 
                 document.getElementById('start-overlay').style.display = 'none'; 
-                playWithFadeIn(); 
-                update(); 
+                currentSlide = 0;
+                clearTimeout(playTimeout);
+                playScene(); 
             }}
             
             function replayPresentation() {{ 
                 document.getElementById('replay-overlay').style.display = 'none'; 
-                audio.currentTime = 0; 
-                currentSlide = -1; 
-                playWithFadeIn(); 
-                update(); 
-            }}
-            
-            function update() {{
-                const now = audio.currentTime * 1000;
-                let acc = 0; 
-                let target = 0;
-                let globalDuration = durations.reduce((a,b)=>a+b,0);
-                
-                document.getElementById('progress-fill').style.width = `${{(now / globalDuration) * 100}}%`;
-                
-                for(let i=0; i<durations.length; i++) {{
-                    if (now >= acc && now < acc + durations[i]) {{ 
-                        target = i; 
-                        break; 
-                    }}
-                    acc += durations[i];
-                }}
-                
-                if (target !== currentSlide) {{
-                    if(currentSlide >= 0 && slides[currentSlide]) {{ 
-                        slides[currentSlide].classList.remove('active'); 
-                    }}
-                    currentSlide = target;
-                    if(slides[currentSlide]) {{ 
-                        slides[currentSlide].classList.add('active'); 
-                    }}
-                }}
-                
-                if (audio.ended) {{
-                    document.getElementById('replay-overlay').style.display = 'flex';
-                }} else {{
-                    animationFrameId = requestAnimationFrame(update);
-                }}
+                currentSlide = 0;
+                clearTimeout(playTimeout);
+                playScene(); 
             }}
         </script>
     </body>
@@ -876,7 +856,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             const endAudio = "{end_b64}";
             const aud = document.getElementById('aud'); 
             let current = 0; 
-            let animId;
+            let playTimeout;
 
             // Fades de áudio com limite de volume em 60%
             function playAudioFadeIn(src) {{
@@ -896,12 +876,14 @@ def render_super_aula_html(course_data, tts_config, brand_config):
 
             function start() {{ 
                 document.getElementById('start-overlay').style.display = 'none'; 
+                current = 0;
+                clearTimeout(playTimeout);
                 playStep(); 
             }}
             
             function nextStep() {{ 
                 current++; 
-                setTimeout(playStep, 1000); 
+                playTimeout = setTimeout(playStep, 1000); 
             }}
             
             function finishGame() {{ 
@@ -911,7 +893,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             }}
 
             function playStep() {{
-                cancelAnimationFrame(animId);
+                clearTimeout(playTimeout);
                 document.getElementById('quiz-overlay').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'none';
                 document.querySelectorAll('.video-layer').forEach(l => l.style.display = 'none');
@@ -961,7 +943,9 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                     
                     aud.onended = () => {{
                         sceneIdx++;
-                        setTimeout(playNextScene, 1000); // 1s RESPIRO GARANTIDO
+                        let endSceneProg = (sceneIdx / step.audio_srcs.length) * (1 / data.length);
+                        document.getElementById('progress-fill').style.width = ((baseProg + endSceneProg) * 100) + '%';
+                        playTimeout = setTimeout(playNextScene, 1000); // 1s RESPIRO GARANTIDO
                     }};
                 }}
                 playNextScene();
