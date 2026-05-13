@@ -34,7 +34,7 @@ def generate_script_with_gemini(tema_texto):
     genai.configure(api_key=api_key)
     
     prompt = f"""
-    Atue como um Diretor de Arte e Copywriter de apresentações "Premium Apple-style". 
+    Atue como um Diretor de Arte e Copywriter. 
     Crie um roteiro JSON baseado neste tema: {tema_texto}
     
     REGRAS DE ESTRUTURA:
@@ -42,22 +42,24 @@ def generate_script_with_gemini(tema_texto):
     2. Cada "scene" é um bloco de áudio contínuo de ~20 segundos (cerca de 50-60 palavras) em 'narration_text'.
     3. Dentro de CADA "scene", DEVE haver uma lista 'sub_slides' com 4 a 5 elementos visuais para trocar durante o áudio.
     4. Cada 'sub_slide' PRECISA ter 'image_url' (URL do Unsplash) e um 'layout' escolhido do catálogo abaixo.
+    5. IMPORTANTE: NÃO crie chaves extras como "data". Coloque as propriedades do layout diretamente na raiz do sub_slide.
+    6. CRÍTICO: Os exemplos de layout abaixo são APENAS estruturais. Você DEVE criar o conteúdo 100% focado no tema solicitado. Não engesse com frases de negócios/empresariais se o tema não for sobre isso.
     
-    CATÁLOGO DE LAYOUTS E SUAS CHAVES OBRIGATÓRIAS (Respeite exatamente estas chaves para cada layout escolhido):
-    - "hero": {{"kicker": "TEXTO PEQUENO TOPO", "title": "TITULO GRANDE", "highlight": "TEXTO EM DESTAQUE AZUL", "subtitle": "Descrição embaixo"}}
-    - "pillars": {{"items": [{{"emoji": "🛡️", "title": "Segurança", "desc": "Proteção total"}}]}} (Exatamente 3 itens)
-    - "philosophy": {{"title": "Nossa Essência", "paragraphs": ["Parágrafo 1", "Parágrafo 2"]}}
-    - "side_by_side": {{"side_image": "url_imagem_aqui", "title": "Decisões de Dados", "subtitle": "Intro curta", "list_items": ["Análise", "Dashboards"]}}
-    - "metrics": {{"metrics": [{{"value": "98%", "label": "Satisfação", "color": "text-blue-500"}}]}} (Exatamente 4 itens, cores: text-blue-500, text-purple-500, text-emerald-500, text-orange-500)
-    - "team": {{"title": "Liderança", "members": [{{"name": "Erik", "role": "CEO", "avatar": "https://i.pravatar.cc/150?u=1"}}]}} (Exatamente 3 items)
-    - "timeline": {{"title": "Jornada", "events": [{{"year": "2021", "event": "Fundação", "desc": "Início"}}]}} (Exatamente 4 itens)
-    - "features_grid": {{"features": ["API Nativa", "Segurança", "Multi-Cloud", "Suporte", "Design", "Análise"]}} (Exatamente 6 itens)
-    - "quote": {{"quote_text": "A frase", "author": "Steve Jobs", "role": "Visão"}}
-    - "compare": {{"bad_title": "Cenário Antigo", "bad_items": ["Processos Manuais", "Lento"], "good_title": "Nossa Solução", "good_items": ["Automação IA", "Rápido"]}}
-    - "title_only": {{"title": "Nossa Expansão Global"}}
-    - "ending": {{"title": "Vamos construir o", "highlight": "Próximo Nível?", "contact": "contato@empresa.com", "website": "www.empresa.com"}}
+    CATÁLOGO DE LAYOUTS E SUAS CHAVES OBRIGATÓRIAS (substitua os colchetes pelo seu texto criativo):
+    - "hero": {{"layout": "hero", "image_url": "url", "kicker": "[Categoria curta]", "title": "[TÍTULO PRINCIPAL]", "highlight": "[DESTAQUE]", "subtitle": "[Breve descrição]"}}
+    - "pillars": {{"layout": "pillars", "image_url": "url", "items": [{{"emoji": "🚀", "title": "[Nome do Pilar]", "desc": "[Resumo curto]"}}]}} (Exatamente 3 itens)
+    - "philosophy": {{"layout": "philosophy", "image_url": "url", "title": "[Título do Conceito]", "paragraphs": ["[Parágrafo 1]", "[Parágrafo 2]"]}}
+    - "side_by_side": {{"layout": "side_by_side", "image_url": "url", "side_image": "url_lateral", "title": "[Título]", "subtitle": "[Subtítulo]", "list_items": ["[Item 1]", "[Item 2]"]}}
+    - "metrics": {{"layout": "metrics", "image_url": "url", "metrics": [{{"value": "[Número]", "label": "[Métrica/Dado]", "color": "text-blue-500"}}]}} (Exatamente 4 itens, use cores tailwind como text-purple-500, etc)
+    - "team": {{"layout": "team", "image_url": "url", "title": "[Grupo/Personagens]", "members": [{{"name": "[Nome]", "role": "[Papel/Contexto]", "avatar": "https://i.pravatar.cc/150?u=1"}}]}} (Exatamente 3 items)
+    - "timeline": {{"layout": "timeline", "image_url": "url", "title": "[Título Linha do Tempo]", "events": [{{"year": "[Ano/Fase]", "event": "[Evento]", "desc": "[Descrição]"}}]}} (Exatamente 4 itens)
+    - "features_grid": {{"layout": "features_grid", "image_url": "url", "features": ["[Ponto 1]", "[Ponto 2]", "[Ponto 3]", "[Ponto 4]", "[Ponto 5]", "[Ponto 6]"]}} (Exatamente 6 itens)
+    - "quote": {{"layout": "quote", "image_url": "url", "quote_text": "[Citação relevante]", "author": "[Autor da frase]", "role": "[Contexto do autor]"}}
+    - "compare": {{"layout": "compare", "image_url": "url", "bad_title": "[Lado Negativo/Antigo]", "bad_items": ["[Fato ruim 1]", "[Fato ruim 2]"], "good_title": "[Lado Positivo/Novo]", "good_items": ["[Fato bom 1]", "[Fato bom 2]"]}}
+    - "title_only": {{"layout": "title_only", "image_url": "url", "title": "[Frase de Impacto Central]"}}
+    - "ending": {{"layout": "ending", "image_url": "url", "title": "[Chamada Final]", "highlight": "[Ação/Destaque]", "contact": "[Contato/Link/Destino]", "website": "[Referência extra]"}}
 
-    Use sua criatividade para misturar os layouts e entregar uma apresentação incrivelmente dinâmica.
+    Use sua criatividade para misturar os layouts.
     Responda APENAS com o JSON válido.
     """
 
@@ -119,13 +121,17 @@ def build_luminal_slide(sub_slide, total_index):
     layout = sub_slide.get("layout", "title_only")
     img_url = sub_slide.get("image_url", "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2000")
     
+    # TRUQUE DE MESTRE: Se o Gemini envelopar os dados em "data", a gente captura de lá. 
+    # Se ele mandar na raiz como um bom menino, pegamos da raiz.
+    payload = sub_slide.get("data", sub_slide)
+    
     content = ""
     
     if layout == "hero":
-        kicker = sub_slide.get("kicker", "Apresentação Estratégica")
-        title = sub_slide.get("title", "VISÃO")
-        highlight = sub_slide.get("highlight", "2024")
-        subtitle = sub_slide.get("subtitle", "Arquitetura de inovação e escalabilidade.")
+        kicker = payload.get("kicker", "Apresentação Estratégica")
+        title = payload.get("title", "VISÃO")
+        highlight = payload.get("highlight", "2024")
+        subtitle = payload.get("subtitle", "Arquitetura de inovação e escalabilidade.")
         content = f"""
         <div class="text-center max-w-5xl">
             <h2 class="animate-up delay-1 text-blue-500 font-bold tracking-[0.6em] uppercase text-xs mb-6">{kicker}</h2>
@@ -135,7 +141,7 @@ def build_luminal_slide(sub_slide, total_index):
         """
         
     elif layout == "pillars":
-        items = sub_slide.get("items", [])
+        items = payload.get("items", [])
         cards = ""
         for i, item in enumerate(items[:3]):
             delay = i + 1
@@ -149,8 +155,8 @@ def build_luminal_slide(sub_slide, total_index):
         content = f'<div class="max-w-7xl w-full grid md:grid-cols-3 gap-12">{cards}</div>'
         
     elif layout == "philosophy":
-        title = sub_slide.get("title", "Nossa Essência")
-        paragraphs = sub_slide.get("paragraphs", [])
+        title = payload.get("title", "Nossa Essência")
+        paragraphs = payload.get("paragraphs", [])
         p_html = "".join([f'<p class="animate-up delay-{i+2}">{p}</p>' for i, p in enumerate(paragraphs)])
         content = f"""
         <div class="max-w-4xl glass-card animate-in delay-1">
@@ -160,10 +166,10 @@ def build_luminal_slide(sub_slide, total_index):
         """
         
     elif layout == "side_by_side":
-        side_img = sub_slide.get("side_image", "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000")
-        title = sub_slide.get("title", "Decisões de Dados").replace("\n", "<br>")
-        subtitle = sub_slide.get("subtitle", "Transformando ruído em clareza.")
-        list_items = sub_slide.get("list_items", [])
+        side_img = payload.get("side_image", "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000")
+        title = payload.get("title", "Decisões de Dados").replace("\n", "<br>")
+        subtitle = payload.get("subtitle", "Transformando ruído em clareza.")
+        list_items = payload.get("list_items", [])
         
         colors = ["text-blue-400", "text-emerald-400", "text-purple-400"]
         bg_colors = ["bg-blue-500/20", "bg-emerald-500/20", "bg-purple-500/20"]
@@ -193,7 +199,7 @@ def build_luminal_slide(sub_slide, total_index):
         """
         
     elif layout == "metrics":
-        metrics = sub_slide.get("metrics", [])
+        metrics = payload.get("metrics", [])
         m_html = ""
         for i, m in enumerate(metrics[:4]):
             val = m.get("value", "0")
@@ -208,8 +214,8 @@ def build_luminal_slide(sub_slide, total_index):
         content = f'<div class="max-w-7xl w-full grid grid-cols-2 md:grid-cols-4 gap-8">{m_html}</div>'
 
     elif layout == "team":
-        title = sub_slide.get("title", "Liderança Executiva")
-        members = sub_slide.get("members", [])
+        title = payload.get("title", "Liderança Executiva")
+        members = payload.get("members", [])
         m_html = ""
         for i, m in enumerate(members[:3]):
             name = m.get("name", "Nome")
@@ -232,8 +238,8 @@ def build_luminal_slide(sub_slide, total_index):
         """
 
     elif layout == "timeline":
-        title = sub_slide.get("title", "Nossa Jornada")
-        events = sub_slide.get("events", [])
+        title = payload.get("title", "Nossa Jornada")
+        events = payload.get("events", [])
         e_html = ""
         for i, e in enumerate(events[:4]):
             yr = e.get("year", "2024")
@@ -254,14 +260,14 @@ def build_luminal_slide(sub_slide, total_index):
         """
 
     elif layout == "features_grid":
-        feats = sub_slide.get("features", [])
+        feats = payload.get("features", [])
         f_html = "".join([f'<div class="glass-card animate-up delay-{i+1}">{f}</div>' for i, f in enumerate(feats[:6])])
         content = f'<div class="max-w-7xl w-full grid grid-cols-2 md:grid-cols-3 gap-8">{f_html}</div>'
 
     elif layout == "quote":
-        quote = sub_slide.get("quote_text", "Inovação nos move.")
-        author = sub_slide.get("author", "Visionário")
-        role = sub_slide.get("role", "Líder")
+        quote = payload.get("quote_text", "Inovação nos move.")
+        author = payload.get("author", "Visionário")
+        role = payload.get("role", "Líder")
         content = f"""
         <div class="max-w-5xl text-center">
             <span class="text-8xl text-blue-500 font-serif animate-up delay-1">“</span>
@@ -274,10 +280,10 @@ def build_luminal_slide(sub_slide, total_index):
         """
 
     elif layout == "compare":
-        bt = sub_slide.get("bad_title", "Cenário Antigo")
-        bi = sub_slide.get("bad_items", [])
-        gt = sub_slide.get("good_title", "Solução Luminal")
-        gi = sub_slide.get("good_items", [])
+        bt = payload.get("bad_title", "Cenário Antigo")
+        bi = payload.get("bad_items", [])
+        gt = payload.get("good_title", "Solução Luminal")
+        gi = payload.get("good_items", [])
         
         b_html = "".join([f"<li>✕ {b}</li>" for b in bi])
         g_html = "".join([f"<li>✓ {g}</li>" for g in gi])
@@ -296,10 +302,10 @@ def build_luminal_slide(sub_slide, total_index):
         """
 
     elif layout == "ending":
-        title = sub_slide.get("title", "Vamos construir o")
-        highlight = sub_slide.get("highlight", "Próximo Nível?")
-        contact = sub_slide.get("contact", "contato@email.com")
-        website = sub_slide.get("website", "www.site.com")
+        title = payload.get("title", "Vamos construir o")
+        highlight = payload.get("highlight", "Próximo Nível?")
+        contact = payload.get("contact", "contato@email.com")
+        website = payload.get("website", "www.site.com")
         content = f"""
         <div class="text-center">
             <h2 class="animate-up delay-1 text-7xl font-black mb-12">{title} <br><span class="text-blue-500">{highlight}</span></h2>
@@ -311,7 +317,7 @@ def build_luminal_slide(sub_slide, total_index):
         """
 
     else: # title_only
-        title = sub_slide.get("title", "Título Principal")
+        title = payload.get("title", "Título Principal")
         content = f'<h2 class="text-6xl text-center font-black animate-up delay-1">{title}</h2>'
 
     return f"""
