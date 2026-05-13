@@ -8,3 +8,4 @@ imageio
 decorator
 imageio-ffmpeg
 elevenlabs
+google-generativeai
