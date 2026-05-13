@@ -77,8 +77,8 @@ def generate_script_with_gemini(tema_texto):
 def gen_audio_sync(text, filepath, tts_config):
     provider = tts_config.get("provider", "Edge-TTS")
     
-    # Adicionando um pequeno espaço extra para evitar cortes no final
-    text_with_buffer = text + " . . ." 
+    # Removido o buffer com pontinhos (" . . .") que causava o som bizarro no final
+    clean_text = text 
     
     if "ElevenLabs" in provider:
         try:
@@ -87,9 +87,9 @@ def gen_audio_sync(text, filepath, tts_config):
             voice_id = tts_config.get("voice_id", "JBFqnCBsd6RMkjVDRZzb")
             client = ElevenLabs(api_key=api_key)
             audio_generator = client.text_to_speech.convert(
-                text=text_with_buffer, 
+                text=clean_text, 
                 voice_id=voice_id, 
-                model_id="eleven_multilingual_v2", 
+                model_id="eleven_turbo_v2_5", 
                 output_format="mp3_44100_128"
             )
             with open(filepath, "wb") as f:
@@ -103,7 +103,7 @@ def gen_audio_sync(text, filepath, tts_config):
         async def _edge_gen(txt, path):
             tts = edge_tts.Communicate(txt, "pt-BR-AntonioNeural")
             await tts.save(path)
-        asyncio.run(_edge_gen(text_with_buffer, filepath))
+        asyncio.run(_edge_gen(clean_text, filepath))
 
 # ==========================================
 # MOTOR VISUAL (CONSTRUTOR DE SLIDES HTML)
@@ -586,12 +586,19 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     silence_array = np.zeros((44100, 2))
     silence_clip = AudioArrayClip(silence_array, fps=44100)
 
-    # Gerar 10 feedbacks de sucesso
+    # 1. Gerar 10 feedbacks de sucesso LONGOS e IMERSIVOS (Ajustados ao pedido)
     success_b64s = []
     sucessos = [
-        "Exatamente!", "Na mosca!", "Perfeito!", "Cirúrgico.", 
-        "Mandou bem!", "Exato!", "Aí sim!", "Sensacional.", 
-        "Certíssimo!", "Brilhante!"
+        "Exatamente! Você pegou a visão perfeitamente.",
+        "Na mosca! A sua lógica está corretíssima.",
+        "Perfeito! O seu cérebro já está fazendo as conexões certas.",
+        "Cirúrgico. Resposta exata, vamos em frente.",
+        "Mandou muito bem! É assim que se constrói o conhecimento.",
+        "Exato! Você definitivamente não está de brincadeira hoje.",
+        "Aí sim! Resposta de quem prestou atenção em cada detalhe.",
+        "Sensacional. Gabarito puro, continue nesse ritmo.",
+        "Certíssimo! Estamos exatamente na mesma frequência.",
+        "Brilhante! Acertou na veia. Vamos para o próximo nível."
     ]
     for idx, suc in enumerate(sucessos):
         p = f"temp_files/sa_s_{idx}.mp3"
@@ -599,12 +606,19 @@ def render_super_aula_html(course_data, tts_config, brand_config):
         with open(p, "rb") as f: 
             success_b64s.append("data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8'))
 
-    # Gerar 10 feedbacks de erro
+    # 2. Gerar 10 feedbacks de erro LONGOS e IMERSIVOS (Ajustados ao pedido)
     error_b64s = []
     erros = [
-        "Ops!", "Quase lá!", "Acho que piscou.", "Escorregou.", 
-        "Negativo.", "Não passou nessa.", "Erroooou!", "Longe disso.", 
-        "Incorreto.", "Não rolou."
+        "Ops, não é bem por aí. Pensa um pouquinho mais na explicação que eu dei.",
+        "Quase, mas a lógica falhou. Tente novamente.",
+        "Acho que você piscou na hora da explicação. Foca aqui e tenta de novo.",
+        "Escorregou feio nessa. Revisa o conceito mentalmente e refaça.",
+        "Negativo. Volta duas casas mentais e escolhe outra opção.",
+        "Essa não passou no teste. Pense um pouco mais antes de clicar.",
+        "Errooooou! Mas faz parte do aprendizado. Vai lá, tenta mais uma vez.",
+        "Longe disso. Calma, respira e tenta entender a pegadinha.",
+        "Incorreto. A memória te traiu dessa vez. Escolha de novo.",
+        "Não rolou. Ajusta o foco e tenta marcar outra alternativa."
     ]
     for idx, err in enumerate(erros):
         p = f"temp_files/sa_e_{idx}.mp3"
@@ -875,7 +889,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             let current = 0; 
             let animId;
 
-            // Fades de áudio
+            // Fades de áudio com limite de volume em 60%
             function playAudioFadeIn(src) {{
                 aud.src = src; 
                 aud.volume = 0; 
