@@ -91,7 +91,7 @@ def gen_audio_sync(text, filepath, tts_config):
             voice_id = tts_config.get("voice_id", "JBFqnCBsd6RMkjVDRZzb")
             client = ElevenLabs(api_key=api_key)
             audio_generator = client.text_to_speech.convert(
-                text=text_with_buffer, voice_id=voice_id, model_id="eleven_multilingual_v2", output_format="mp3_44100_128"
+                text=text_with_buffer, voice_id=voice_id, model_id="eleven_multilingual_v3", output_format="mp3_44100_128"
             )
             with open(filepath, "wb") as f:
                 for chunk in audio_generator:
