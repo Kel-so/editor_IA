@@ -24,41 +24,78 @@ def cleanup_temp():
     os.makedirs("temp_files", exist_ok=True)
 
 # ==========================================
-# INTEGRAÇÃO GEMINI (Cérebro)
+# INTEGRAÇÃO GEMINI (Cérebro da Super Aula)
 # ==========================================
-def generate_script_with_gemini(tema_texto):
+def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_title=""):
     api_key = st.secrets.get("GEMINI_API_KEY", "")
     if not api_key:
         st.error("🚨 Chave do Gemini não encontrada!")
         return None
     
     genai.configure(api_key=api_key)
-    prompt = f"""
-    Atue como um Diretor de Arte e Copywriter "Premium Apple-style". 
-    Crie um roteiro JSON de uma AULA rápida sobre: {tema_texto}
     
-    REGRAS CRÍTICAS DE ESTRUTURA JSON:
-    1. O JSON DEVE ser um objeto com a chave raiz "scenes". Ex: {{"scenes": [...]}}
-    2. NÃO crie listas de 'sub_slides'. A própria "scene" é o slide.
-    3. Coloque as propriedades do layout (layout, image_url, title, etc) DIRETAMENTE na raiz da scene, junto com 'narration_text'.
-    4. NÃO use a chave "data".
-    5. Cada cena deve ter ~8 segundos de narração.
+    instrucao_game = ""
+    if tem_game:
+        instrucao_game = f"""
+        INCLUA OBRIGATORIAMENTE UM BLOCO DE GAME no meio da jornada de aprendizado para fixação prática.
+        Use exatamente o seguinte formato para o bloco:
+        {{"type": "game", "title": "{game_title}", "url": "{game_url}"}}
+        """
 
-    CATÁLOGO DE LAYOUTS (Use as chaves exatas mostradas aqui dentro de cada scene):
-    - "hero": {{"narration_text": "...", "layout": "hero", "image_url": "url_unsplash", "kicker": "CATEGORIA", "title": "TÍTULO IMPACTANTE", "highlight": "DESTAQUE NEON", "subtitle": "Subtítulo"}}
-    - "pillars": {{"narration_text": "...", "layout": "pillars", "image_url": "url", "items": [{{"emoji": "🧠", "title": "Conceito 1", "desc": "Explicação"}}]}} (Exatamente 3 itens)
-    - "philosophy": {{"narration_text": "...", "layout": "philosophy", "image_url": "url", "title": "Mudança", "paragraphs": ["P1", "P2"]}}
-    - "side_by_side": {{"narration_text": "...", "layout": "side_by_side", "image_url": "url", "side_image": "url_lateral", "title": "Análise", "subtitle": "Contexto", "list_items": ["Ponto A", "Ponto B"]}}
-    - "metrics": {{"narration_text": "...", "layout": "metrics", "image_url": "url", "metrics": [{{"value": "99%", "label": "Impacto", "color": "text-brand"}}]}} (Exatamente 4 itens)
-    - "team": {{"narration_text": "...", "layout": "team", "image_url": "url", "title": "Protagonistas", "members": [{{"name": "Nome", "role": "Papel", "avatar": "url"}}]}} (Exatamente 3 items)
-    - "timeline": {{"narration_text": "...", "layout": "timeline", "image_url": "url", "title": "Evolução", "events": [{{"year": "Fase 1", "event": "O Início", "desc": "Contexto"}}]}} (Exatamente 4 itens)
-    - "features_grid": {{"narration_text": "...", "layout": "features_grid", "image_url": "url", "features": ["A", "B", "C", "D", "E", "F"]}} (Exatamente 6 itens)
-    - "quote": {{"narration_text": "...", "layout": "quote", "image_url": "url", "quote_text": "Frase genial", "author": "Autor", "role": "Contexto"}}
-    - "compare": {{"narration_text": "...", "layout": "compare", "image_url": "url", "bad_title": "O Passado", "bad_items": ["Erro 1"], "good_title": "O Futuro", "good_items": ["Acerto 1"]}}
-    - "title_only": {{"narration_text": "...", "layout": "title_only", "image_url": "url", "title": "Frase de Impacto Absoluto"}}
-    - "ending": {{"narration_text": "...", "layout": "ending", "image_url": "url", "title": "Qual será o seu", "highlight": "Próximo Passo?", "contact": "contato@empresa.com", "website": "www.empresa.com"}}
+    prompt = f"""
+    Atue como um Diretor de Arte e Designer Instrucional "Premium Apple-style". 
+    Sua missão é criar o JSON de um CURSO INTERATIVO COMPLETO E PROFUNDO sobre: {tema_texto}
+    
+    ESTRUTURA OBRIGATÓRIA DO RETORNO (DEVOLVA APENAS UM ARRAY JSON PURO):
+    [
+      {{
+        "type": "video",
+        "scenes": [
+          {{
+            "layout": "hero",
+            "image_url": "url_unsplash_valida",
+            "kicker": "MÓDULO 1",
+            "title": "TITULO",
+            "highlight": "DESTAQUE",
+            "subtitle": "Subtítulo de impacto",
+            "narration_text": "Narração de aproximadamente 8 a 10 segundos explicando o contexto de forma profunda."
+          }}
+          // Adicione de 3 a 6 cenas usando layouts variados (pillars, compare, metrics, etc)
+        ]
+      }},
+      {{
+        "type": "quiz",
+        "questions": [
+          {{
+            "question": "Pergunta instigante baseada no vídeo anterior?",
+            "options": ["Opção Incorreta", "Opção Certa", "Outra Opção Errada"],
+            "answer": "Opção Certa",
+            "explanation_correct": "Explicação completa e elogiando o acerto.",
+            "hints": ["Dica construtiva 1 caso o aluno erre.", "Dica 2 para guiar ao raciocínio lógico."]
+          }}
+          // Coloque 1 ou 2 perguntas nesse bloco
+        ]
+      }},
+      // CRIE MAIS BLOCOS DE VÍDEO E QUIZ PARA APROFUNDAR O ASSUNTO (Uma verdadeira Super Aula)
+      {instrucao_game}
+      // TERMINE SEMPRE COM UM BLOCO DE VÍDEO CONTENDO UMA CENA COM LAYOUT "ending".
+    ]
 
-    Responda APENAS o JSON puro.
+    CATÁLOGO DE LAYOUTS DE VÍDEO (REGRAS CRÍTICAS DE CHAVES):
+    - "hero": {{"narration_text": "...", "layout": "hero", "image_url": "url", "kicker": "...", "title": "...", "highlight": "...", "subtitle": "..."}}
+    - "pillars": {{"narration_text": "...", "layout": "pillars", "image_url": "url", "items": [{{"emoji": "🧠", "title": "T", "desc": "D"}}]}} (Exatamente 3 itens)
+    - "philosophy": {{"narration_text": "...", "layout": "philosophy", "image_url": "url", "title": "T", "paragraphs": ["P1", "P2"]}}
+    - "side_by_side": {{"narration_text": "...", "layout": "side_by_side", "image_url": "url", "side_image": "url_lateral", "title": "T", "subtitle": "S", "list_items": ["L1", "L2"]}}
+    - "metrics": {{"narration_text": "...", "layout": "metrics", "image_url": "url", "metrics": [{{"value": "99%", "label": "L", "color": "text-brand"}}]}} (Exatamente 4 itens)
+    - "team": {{"narration_text": "...", "layout": "team", "image_url": "url", "title": "T", "members": [{{"name": "N", "role": "R", "avatar": "url"}}]}} (Exatamente 3 items)
+    - "timeline": {{"narration_text": "...", "layout": "timeline", "image_url": "url", "title": "T", "events": [{{"year": "Y", "event": "E", "desc": "D"}}]}} (Exatamente 4 itens)
+    - "features_grid": {{"narration_text": "...", "layout": "features_grid", "image_url": "url", "features": ["F1", "F2", "F3", "F4", "F5", "F6"]}} (Exatamente 6 itens)
+    - "quote": {{"narration_text": "...", "layout": "quote", "image_url": "url", "quote_text": "Q", "author": "A", "role": "R"}}
+    - "compare": {{"narration_text": "...", "layout": "compare", "image_url": "url", "bad_title": "BT", "bad_items": ["B1"], "good_title": "GT", "good_items": ["G1"]}}
+    - "title_only": {{"narration_text": "...", "layout": "title_only", "image_url": "url", "title": "T"}}
+    - "ending": {{"narration_text": "...", "layout": "ending", "image_url": "url", "title": "T", "highlight": "H", "contact": "contato", "website": "site"}}
+
+    LEMBRE-SE: Retorne APENAS um Array em formato JSON. Sem marcações Markdown (```json).
     """
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
@@ -66,8 +103,748 @@ def generate_script_with_gemini(tema_texto):
             prompt, 
             generation_config=genai.GenerationConfig(response_mime_type="application/json")
         )
-        return json.loads(response.text)
+        # Limpeza pesada caso a IA decida cuspir markdown
+        raw_text = response.text.strip()
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:]
+        if raw_text.endswith("```"):
+            raw_text = raw_text[:-3]
+        return json.loads(raw_text.strip())
     except Exception as e:
+        st.error(f"Erro Gemini: {e}")
+        return None
+
+# ==========================================
+# MOTOR DE VOZ
+# ==========================================
+def gen_audio_sync(text, filepath, tts_config):
+    provider = tts_config.get("provider", "Edge-TTS")
+    
+    # TRATAMENTO DO BUG DE CORTE E SOM ESTRANHO:
+    # A IA não pode terminar a frase sem pontuação. Se faltar, injetamos um ponto.
+    clean_text = text.strip()
+    if clean_text and clean_text[-1] not in ['.', '!', '?']:
+        clean_text += "."
+    
+    if "ElevenLabs" in provider:
+        try:
+            from elevenlabs.client import ElevenLabs
+            api_key = st.secrets.get("ELEVENLABS_API_KEY", "")
+            voice_id = tts_config.get("voice_id", "JBFqnCBsd6RMkjVDRZzb")
+            client = ElevenLabs(api_key=api_key)
+            audio_generator = client.text_to_speech.convert(
+                text=clean_text, 
+                voice_id=voice_id, 
+                model_id="eleven_turbo_v2_5", 
+                output_format="mp3_44100_128"
+            )
+            with open(filepath, "wb") as f:
+                for chunk in audio_generator:
+                    if chunk: 
+                        f.write(chunk)
+        except Exception as e:
+            st.error(f"Erro ElevenLabs: {e}")
+            st.stop()
+    else:
+        async def _edge_gen(txt, path):
+            tts = edge_tts.Communicate(txt, "pt-BR-AntonioNeural")
+            await tts.save(path)
+        asyncio.run(_edge_gen(clean_text, filepath))
+
+# ==========================================
+# MOTOR VISUAL (CONSTRUTOR DE SLIDES HTML)
+# ==========================================
+def build_luminal_slide(slide_data, total_index):
+    img_url = slide_data.get("image_url", "[https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200](https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200)")
+    layout = slide_data.get("layout", "title_only")
+    p = slide_data.get("data", slide_data)
+    
+    content = ""
+    
+    if layout == "hero":
+        content = f"""
+        <div class="text-center max-w-5xl">
+            <h2 class="animate-up delay-1 text-brand font-bold tracking-[0.6em] uppercase text-xs mb-6">
+                {p.get('kicker', 'Módulo')}
+            </h2>
+            <h1 class="animate-up delay-2 text-7xl md:text-9xl font-black mb-10 leading-tight">
+                {p.get('title', 'TÍTULO')} <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand to-white/50">
+                    {p.get('highlight', '')}
+                </span>
+            </h1>
+            <p class="animate-up delay-3 text-xl text-gray-400 font-light max-w-2xl mx-auto">
+                {p.get('subtitle', '')}
+            </p>
+        </div>
+        """
+    
+    elif layout == "pillars":
+        cards = ""
+        for i, item in enumerate(p.get("items", [])):
+            cards += f"""
+            <div class="glass-card animate-up delay-{i+1}">
+                <div class="text-4xl mb-6">{item.get("emoji", "🔹")}</div>
+                <h3 class="text-2xl font-bold mb-4">{item.get("title", "Pilar")}</h3>
+                <p class="text-gray-400 text-sm">{item.get("desc", "")}</p>
+            </div>
+            """
+        content = f"""
+        <div class="max-w-7xl w-full grid md:grid-cols-3 gap-12">
+            {cards}
+        </div>
+        """
+    
+    elif layout == "philosophy":
+        p_html = ""
+        for i, par in enumerate(p.get("paragraphs", [])):
+            p_html += f'<p class="animate-up delay-{i+2}">{par}</p>'
+            
+        content = f"""
+        <div class="max-w-4xl glass-card animate-in delay-1">
+            <h2 class="text-5xl font-black mb-10 text-brand">{p.get('title', 'Filosofia')}</h2>
+            <div class="space-y-8 text-gray-300 text-xl leading-relaxed">
+                {p_html}
+            </div>
+        </div>
+        """
+    
+    elif layout == "side_by_side":
+        side_img = p.get("side_image", img_url)
+        li_html = ""
+        for i, item in enumerate(p.get("list_items", [])):
+            li_html += f"""
+            <li class="flex items-center gap-4 text-brand font-bold">
+                <span class="w-8 h-8 bg-brand/20 rounded-full flex items-center justify-center text-xs text-white">0{i+1}</span>
+                {item}
+            </li>
+            """
+            
+        content = f"""
+        <div class="max-w-7xl w-full grid md:grid-cols-2 gap-20 items-center">
+            <div class="animate-in delay-1 rounded-[40px] overflow-hidden h-[600px] shadow-2xl">
+                <img src="{side_img}" class="w-full h-full object-cover">
+            </div>
+            <div class="space-y-8">
+                <h2 class="animate-up delay-2 text-6xl font-black leading-tight">
+                    {p.get('title', 'Análise').replace(chr(10), '<br>')}
+                </h2>
+                <p class="animate-up delay-3 text-gray-400 text-xl">{p.get('subtitle', '')}</p>
+                <ul class="space-y-6 animate-up delay-4">
+                    {li_html}
+                </ul>
+            </div>
+        </div>
+        """
+
+    elif layout == "metrics":
+        m_html = ""
+        for i, m in enumerate(p.get("metrics", [])):
+            m_html += f"""
+            <div class="glass-card text-center animate-in delay-{i+1}">
+                <div class="text-6xl font-black text-brand mb-4">{m.get("value", "0")}</div>
+                <div class="text-xs uppercase tracking-widest opacity-40">{m.get("label", "Dado")}</div>
+            </div>
+            """
+        content = f"""
+        <div class="max-w-7xl w-full grid grid-cols-2 md:grid-cols-4 gap-8">
+            {m_html}
+        </div>
+        """
+
+    elif layout == "team":
+        m_html = ""
+        for i, m in enumerate(p.get("members", [])):
+            m_html += f"""
+            <div class="glass-card text-center animate-up delay-{i+2}">
+                <div class="w-32 h-32 rounded-full mx-auto mb-8 border-4 border-brand/30 overflow-hidden">
+                    <img src="{m.get("avatar", "[https://i.pravatar.cc/150](https://i.pravatar.cc/150)")}" alt="av">
+                </div>
+                <h4 class="text-2xl font-bold">{m.get("name", "Nome")}</h4>
+                <p class="text-brand/80">{m.get("role", "Cargo")}</p>
+            </div>
+            """
+        content = f"""
+        <div class="max-w-6xl w-full">
+            <h2 class="text-center text-4xl font-bold mb-16 animate-up delay-1">{p.get('title', 'Equipe')}</h2>
+            <div class="grid md:grid-cols-3 gap-12">
+                {m_html}
+            </div>
+        </div>
+        """
+
+    elif layout == "timeline":
+        e_html = ""
+        for i, e in enumerate(p.get("events", [])):
+            e_html += f"""
+            <div class="glass-card animate-in delay-{i+2}">
+                <div class="text-brand font-bold text-sm mb-2">{e.get("year", "Fase")}</div>
+                <h5 class="font-bold">{e.get("event", "Evento")}</h5>
+                <p class="text-xs text-gray-500 mt-4">{e.get("desc", "Descrição")}</p>
+            </div>
+            """
+        content = f"""
+        <div class="max-w-6xl w-full">
+            <h2 class="text-4xl font-bold mb-16 animate-up delay-1">{p.get('title', 'Jornada')}</h2>
+            <div class="grid md:grid-cols-4 gap-6">
+                {e_html}
+            </div>
+        </div>
+        """
+
+    elif layout == "features_grid":
+        f_html = ""
+        for i, f in enumerate(p.get("features", [])):
+            f_html += f"""
+            <div class="glass-card text-center font-bold animate-up delay-{i+1}">
+                {f}
+            </div>
+            """
+        content = f"""
+        <div class="max-w-7xl w-full grid grid-cols-2 md:grid-cols-3 gap-8">
+            {f_html}
+        </div>
+        """
+
+    elif layout == "compare":
+        bi = "".join([f"<li>✕ {b}</li>" for b in p.get("bad_items", [])])
+        gi = "".join([f"<li>✓ {g}</li>" for g in p.get("good_items", [])])
+        
+        content = f"""
+        <div class="max-w-6xl w-full grid md:grid-cols-2 gap-px bg-white/5 rounded-[40px] overflow-hidden border border-white/10">
+            <div class="glass-card !rounded-none !bg-red-500/5 p-16 animate-in delay-1">
+                <h3 class="text-3xl font-bold mb-8 text-red-400">{p.get("bad_title", "Antigo")}</h3>
+                <ul class="space-y-6 opacity-60">{bi}</ul>
+            </div>
+            <div class="glass-card !rounded-none !bg-brand/10 p-16 animate-in delay-2">
+                <h3 class="text-3xl font-bold mb-8 text-brand">{p.get("good_title", "Novo")}</h3>
+                <ul class="space-y-6">{gi}</ul>
+            </div>
+        </div>
+        """
+    
+    elif layout == "quote":
+        content = f"""
+        <div class="max-w-5xl text-center">
+            <span class="text-8xl text-brand font-serif animate-up delay-1">“</span>
+            <h2 class="text-5xl font-light italic animate-up delay-2 leading-relaxed">{p.get('quote_text', '')}</h2>
+            <div class="mt-12 animate-up delay-3">
+                <p class="text-2xl font-bold">{p.get('author', '')}</p>
+                <p class="text-brand/80 text-sm uppercase">{p.get('role', '')}</p>
+            </div>
+        </div>
+        """
+    
+    elif layout == "ending":
+        content = f"""
+        <div class="text-center">
+            <h2 class="animate-up delay-1 text-7xl font-black mb-12">
+                {p.get("title", "Vamos ao")} <br>
+                <span class="text-brand">{p.get("highlight", "Fim?")}</span>
+            </h2>
+            <div class="glass-card inline-block text-left animate-in delay-2">
+                <p class="text-brand font-bold mb-2">{p.get("contact", "@contato")}</p>
+                <p class="text-gray-400">{p.get("website", "[www.site.com](https://www.site.com)")}</p>
+            </div>
+        </div>
+        """
+
+    else:
+        content = f"""
+        <h2 class="text-6xl text-center font-black animate-up delay-1">
+            {p.get("title", "...")}
+        </h2>
+        """
+
+    return f"""
+    <section class="slide" data-index="{total_index}">
+        <div class="bg-container">
+            <img src="{img_url}" alt="bg">
+        </div>
+        {content}
+    </section>
+    """
+
+# ==========================================
+# MOTOR DA SUPER AULA (COMPILADOR HTML/JS MONOLÍTICO)
+# Serve tanto para Aba 1 (Gerada) quanto Aba 2 (Hardcoded)
+# ==========================================
+def render_super_aula_html(course_data, tts_config, brand_config):
+    js_course_data = []
+    html_layers = ""
+    st.write("⚙️ Compilando Inteligência da Super Aula...")
+    progress = st.progress(0)
+    cleanup_temp()
+
+    # O Respiro Mágico de 1 Segundo entre cenas de um mesmo bloco de vídeo
+    silence_array = np.zeros((44100, 2))
+    silence_clip = AudioArrayClip(silence_array, fps=44100)
+
+    end_p = f"temp_files/sa_final_end.mp3"
+    gen_audio_sync("Parabéns! Você concluiu essa jornada com excelência. O conhecimento agora é seu.", end_p, tts_config)
+    with open(end_p, "rb") as f: 
+        end_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+
+    total_global_slides = 0
+    for idx, block in enumerate(course_data):
+        st.write(f"🎙️ Processando Bloco {idx+1}/{len(course_data)} ({block['type']})...")
+        
+        if block["type"] == "video":
+            audio_srcs = []
+            slides_html = ""
+            
+            for s_idx, scene in enumerate(block["scenes"]):
+                p = f"temp_files/sa_v_{idx}_{s_idx}.mp3"
+                gen_audio_sync(scene.get("narration_text", ""), p, tts_config)
+                
+                with open(p, "rb") as f: 
+                    b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+                    audio_srcs.append(b64)
+                
+                slides_html += build_luminal_slide(scene, total_global_slides)
+                total_global_slides += 1
+                
+            js_course_data.append({
+                "type": "video", 
+                "layer_id": f"layer_{idx}", 
+                "audio_srcs": audio_srcs
+            })
+            html_layers += f"""
+            <div id="layer_{idx}" class="video-layer" style="display:none; position:absolute; inset:0;">
+                {slides_html}
+            </div>
+            """
+
+        elif block["type"] == "quiz":
+            qs = []
+            
+            intros_suc = ["Exatamente!", "Na mosca!", "Perfeito!", "Cirúrgico.", "Mandou muito bem!"]
+            intros_err = ["Ops, não é bem por aí.", "Escorregou feio nessa.", "Não foi dessa vez.", "Quase, mas a lógica falhou.", "Incorreto. A memória te traiu dessa vez."]
+            
+            for q_idx, q in enumerate(block["questions"]):
+                # Feedbacks Inteligentes (Baseados no JSON Gerado/Hardcoded)
+                exp_correct = q.get("explanation_correct", "Essa é a lógica correta.")
+                intro_s = np.random.choice(intros_suc)
+                suc_text = f"{intro_s} {exp_correct}"
+                
+                p_suc = f"temp_files/sa_q_{idx}_{q_idx}_s.mp3"
+                gen_audio_sync(suc_text, p_suc, tts_config)
+                with open(p_suc, "rb") as f:
+                    suc_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+
+                err_b64_list = []
+                hints = q.get("hints", ["Revise o conceito e tente novamente."])
+                
+                for h_idx, hint in enumerate(hints):
+                    intro_e = np.random.choice(intros_err)
+                    err_text = f"{intro_e} Pensa comigo: {hint}"
+                    
+                    p_err = f"temp_files/sa_q_{idx}_{q_idx}_e_{h_idx}.mp3"
+                    gen_audio_sync(err_text, p_err, tts_config)
+                    with open(p_err, "rb") as f:
+                        err_b64_list.append("data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8'))
+
+                answer_index = 0
+                if q["answer"] in q["options"]:
+                    answer_index = q["options"].index(q["answer"])
+
+                qs.append({
+                    "question": q["question"], 
+                    "options": q["options"], 
+                    "answer_idx": answer_index,
+                    "audio_success": suc_b64,
+                    "audio_errors": err_b64_list
+                })
+                
+            js_course_data.append({
+                "type": "quiz", 
+                "questions": qs
+            })
+        
+        elif block["type"] == "game":
+            js_course_data.append({
+                "type": "game", 
+                "url": block["url"], 
+                "title": block.get("title", "Desafio Prático")
+            })
+
+        progress.progress((idx+1)/len(course_data))
+
+    html_code = f"""
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+        <script>
+            tailwind.config = {{ 
+                theme: {{ 
+                    extend: {{ 
+                        colors: {{ brand: '{brand_config["color"]}' }} 
+                    }} 
+                }} 
+            }}
+        </script>
+        <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap)" rel="stylesheet">
+        <style>
+            :root {{ --primary: {brand_config["color"]}; --bg-dark: #020617; }}
+            body {{ font-family: 'Inter', sans-serif; background: var(--bg-dark); color: white; overflow: hidden; margin: 0; }}
+            .slide {{ position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity 0.8s; display: flex; align-items: center; justify-content: center; padding: 2rem; }}
+            .slide.active {{ opacity: 1; visibility: visible; }}
+            .bg-container {{ position: absolute; inset: 0; z-index: -1; }}
+            .bg-container img {{ width: 100%; height: 100%; object-fit: cover; filter: blur(25px) brightness(0.35); transition: 10s linear; }}
+            .active .bg-container img {{ transform: scale(1.2); }}
+            .glass-card {{ background: rgba(255,255,255,0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); border-radius: 32px; padding: 3rem; }}
+            .animate-up {{ transform: translateY(40px); opacity: 0; transition: 1s cubic-bezier(0.2,1,0.3,1); }}
+            .active .animate-up {{ transform: translateY(0); opacity: 1; }}
+            #progress-fill {{ position: fixed; top: 0; left: 0; height: 4px; background: var(--primary); width: 0%; transition: width 0.3s linear; z-index: 1000; box-shadow: 0 0 10px var(--primary);}}
+            .overlay {{ position: fixed; inset: 0; z-index: 999; background: #020617; display: flex; align-items: center; justify-content: center; flex-direction: column; }}
+            .quiz-btn {{ border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; }}
+            .quiz-btn:hover:not(:disabled) {{ border-color: var(--primary); background: rgba(255,255,255,0.1); transform: scale(1.02); }}
+            .btn-shake {{ animation: shake 0.5s; border-color: #ef4444 !important; background: rgba(239,68,68,0.2) !important;}}
+            .btn-pulse {{ animation: pulse 1s infinite; border-color: #22c55e !important; background: rgba(34,197,94,0.2) !important;}}
+            @keyframes shake {{ 0%, 100% {{ transform: translateX(0); }} 20%, 60% {{ transform: translateX(-8px); }} 40%, 80% {{ transform: translateX(8px); }} }}
+            @keyframes popIn {{ 0% {{ transform: scale(0.8) translateY(30px); opacity: 0; }} 100% {{ transform: scale(1) translateY(0); opacity: 1; }} }}
+            @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }} 70% {{ box-shadow: 0 0 0 20px rgba(34,197,94,0); }} 100% {{ box-shadow: 0 0 0 0 rgba(34,197,94,0); }} }}
+            .anim-pop {{ animation: popIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }}
+        </style>
+    </head>
+    <body>
+        <div id="progress-fill"></div>
+        <div id="start-overlay" class="overlay"><button onclick="start()" class="px-16 py-8 bg-brand text-black font-black rounded-full text-2xl shadow-[0_0_50px_brand]">INICIAR SUPER AULA</button></div>
+        <div id="end-overlay" class="overlay" style="display:none; background: rgba(2,6,23,0.9); backdrop-filter: blur(20px);"><h2 class="text-6xl font-black mb-12 text-white">Masterclass Concluída!</h2><button onclick="location.reload()" class="px-12 py-6 bg-brand text-black font-black rounded-full">🔄 REINICIAR</button></div>
+        
+        <div id="quiz-overlay" class="overlay" style="display:none; background: rgba(2,6,23,0.9); backdrop-filter: blur(20px);">
+            <div id="quiz-content" class="max-w-4xl w-full px-8">
+                <div class="inline-block px-4 py-1 rounded-full bg-brand/20 border border-brand/30 text-brand text-xs font-black tracking-widest uppercase mb-6 flex justify-between w-full"><span>⚡ DESAFIO</span><span id="quiz-progress-text"></span></div>
+                <h2 id="q-txt" class="text-4xl font-black mb-10 leading-tight">Pergunta...</h2><div id="q-opts" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <div id="game-overlay" class="overlay" style="display:none; background: #000; z-index: 1000;">
+            <div class="absolute top-6 left-1/2 -translate-x-1/2 z-[1001] flex items-center gap-4 bg-black/80 p-4 rounded-full border border-white/10">
+                <span class="text-brand font-bold uppercase" id="game-title">SIMULADOR</span>
+                <button onclick="finishGame()" class="px-6 py-2 bg-brand text-black font-bold rounded-full text-sm hover:scale-105 transition-all">FINALIZAR GAME</button>
+            </div>
+            <iframe id="game-frame" src="" class="w-full h-full border-none"></iframe>
+        </div>
+
+        <header class="fixed top-10 left-10 z-50 flex items-center gap-6">{brand_config["logo"]}<div><div class="text-[10px] font-bold uppercase opacity-40">{brand_config["header_top"]}</div><div class="text-sm font-medium text-brand">{brand_config["header_bottom"]}</div></div></header>
+        <audio id="aud"></audio>
+        <main id="video-container" class="relative h-screen w-full overflow-hidden">{html_layers}</main>
+
+        <script>
+            const data = {json.dumps(js_course_data)}; 
+            const endAudio = "{end_b64}";
+            const aud = document.getElementById('aud'); 
+            let current = 0; 
+            let playTimeout;
+
+            function playAudioFadeIn(src) {{
+                aud.src = src; aud.volume = 0; aud.play();
+                let vol = 0; let fade = setInterval(() => {{ if (vol < 0.6) {{ vol += 0.05; aud.volume = vol; }} else {{ clearInterval(fade); }} }}, 50);
+            }}
+
+            function start() {{ document.getElementById('start-overlay').style.display = 'none'; current = 0; clearTimeout(playTimeout); playStep(); }}
+            function nextStep() {{ current++; playTimeout = setTimeout(playStep, 1000); }}
+            function finishGame() {{ document.getElementById('game-overlay').style.display = 'none'; document.getElementById('game-frame').src = ""; nextStep(); }}
+
+            function playStep() {{
+                clearTimeout(playTimeout);
+                document.getElementById('quiz-overlay').style.display = 'none';
+                document.getElementById('game-overlay').style.display = 'none';
+                document.querySelectorAll('.video-layer').forEach(l => l.style.display = 'none');
+
+                if(current >= data.length) {{ document.getElementById('end-overlay').style.display = 'flex'; playAudioFadeIn(endAudio); return; }}
+
+                const step = data[current];
+                if(step.type === 'video') {{
+                    const layer = document.getElementById(step.layer_id); layer.style.display = 'block';
+                    runVideoSequential(step, layer);
+                }} else if(step.type === 'quiz') {{
+                    document.getElementById('progress-fill').style.width = '100%';
+                    showQuiz(step, 0);
+                }} else if(step.type === 'game') {{
+                    document.getElementById('game-overlay').style.display = 'flex';
+                    document.getElementById('game-title').innerText = step.title;
+                    document.getElementById('game-frame').src = step.url;
+                }}
+            }}
+
+            function runVideoSequential(step, layer) {{
+                const slides = layer.querySelectorAll('.slide'); let sceneIdx = 0;
+                function playNextScene() {{
+                    if (sceneIdx >= step.audio_srcs.length) {{ nextStep(); return; }}
+                    slides.forEach(s => s.classList.remove('active'));
+                    if(slides[sceneIdx]) slides[sceneIdx].classList.add('active');
+                    
+                    let baseProg = (current / data.length);
+                    let sceneProg = (sceneIdx / step.audio_srcs.length) * (1 / data.length);
+                    document.getElementById('progress-fill').style.width = ((baseProg + sceneProg) * 100) + '%';
+                    
+                    playAudioFadeIn(step.audio_srcs[sceneIdx]);
+                    
+                    aud.onended = () => {{
+                        sceneIdx++;
+                        let endSceneProg = (sceneIdx / step.audio_srcs.length) * (1 / data.length);
+                        document.getElementById('progress-fill').style.width = ((baseProg + endSceneProg) * 100) + '%';
+                        playTimeout = setTimeout(playNextScene, 1000); // 1s RESPIRO GARANTIDO
+                    }};
+                }}
+                playNextScene();
+            }}
+
+            function showQuiz(step, qIdx) {{
+                const qc = document.getElementById('quiz-overlay'); qc.style.display = 'flex';
+                const content = document.getElementById('quiz-content');
+                content.style.animation = 'none'; void content.offsetWidth; content.style.animation = 'popIn 0.7s forwards';
+                
+                const q = step.questions[qIdx];
+                document.getElementById('quiz-progress-text').innerText = `Pergunta ${{qIdx+1}}/${{step.questions.length}}`;
+                document.getElementById('q-txt').innerText = q.question;
+                const opts = document.getElementById('q-opts'); opts.innerHTML = '';
+                
+                q.options.forEach((opt, i) => {{
+                    const btn = document.createElement('button');
+                    btn.className = "quiz-btn glass-card w-full text-left p-6 text-xl flex justify-between";
+                    btn.innerHTML = `<span>${{opt}}</span><span class="indicator text-2xl"></span>`;
+                    
+                    btn.onclick = () => {{
+                        document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = true);
+                        const ind = btn.querySelector('.indicator');
+                        
+                        if(i === q.answer_idx) {{
+                            btn.classList.add('btn-pulse'); ind.innerText = "✅";
+                            playAudioFadeIn(q.audio_success); 
+                            aud.onended = () => {{ 
+                                aud.onended = null; btn.classList.remove('btn-pulse'); 
+                                if(qIdx+1 < step.questions.length) showQuiz(step, qIdx+1); else nextStep(); 
+                            }};
+                        }} else {{
+                            btn.classList.add('btn-shake'); ind.innerText = "❌";
+                            const randomErr = q.audio_errors[Math.floor(Math.random() * q.audio_errors.length)];
+                            playAudioFadeIn(randomErr); 
+                            aud.onended = () => {{ 
+                                aud.onended = null; document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = false); btn.classList.remove('btn-shake'); ind.innerText = ""; 
+                            }};
+                        }}
+                    }};
+                    opts.appendChild(btn);
+                }});
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=900, scrolling=False)
+
+# ==========================================
+# RENDERIZADOR MP4 (Somente Vídeos)
+# ==========================================
+def render_mp4_video(course_data, tts_config):
+    st.info("⚙️ Renderizando MP4 Simples...")
+    clips = []
+    
+    # Extrai apenas as cenas de video
+    scenes = []
+    for block in course_data:
+        if block.get("type") == "video":
+            scenes.extend(block.get("scenes", []))
+            
+    if not scenes:
+        st.error("Nenhuma cena de vídeo encontrada para renderizar MP4.")
+        return
+        
+    progress = st.progress(0)
+    silence_array = np.zeros((44100, 2))
+    silence_clip = AudioArrayClip(silence_array, fps=44100)
+    
+    for i, scene in enumerate(scenes):
+        p = f"temp_files/m_{i}.mp3"
+        gen_audio_sync(scene.get("narration_text", ""), p, tts_config)
+        
+        audio = AudioFileClip(p)
+        audio = concatenate_audioclips([audio, silence_clip])
+        
+        base = ColorClip(size=(1280, 720), color=(15, 23, 42), duration=audio.duration).set_audio(audio)
+        
+        txt = scene.get("narration_text", "")[:60] + "..."
+        img = Image.new('RGBA', (1280, 720), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        font = ImageFont.load_default()
+        draw.text((100, 300), txt, fill="white", font=font)
+        
+        txt_clip = ImageClip(np.array(img)).set_duration(audio.duration).set_position('center')
+        clips.append(CompositeVideoClip([base, txt_clip]))
+        progress.progress((i+1)/len(scenes))
+        
+    final_v = concatenate_videoclips(clips, method="compose")
+    final_v.write_videofile("temp_files/output.mp4", fps=24, codec="libx264", logger=None)
+    st.video("temp_files/output.mp4")
+
+# ==========================================
+# UI E INICIALIZAÇÃO
+# ==========================================
+st.set_page_config(page_title="Luminal Master", layout="wide")
+with st.sidebar:
+    st.title("Settings")
+    htop = st.text_input("Superior", "Saber Gestão")
+    hbot = st.text_input("Inferior", "NR-33 Expert")
+    brand = st.color_picker("Destaque", "#8ef736")
+    logo = st.file_uploader("Logo PNG", type=["png", "jpg"])
+    
+    if logo:
+        b64 = base64.b64encode(logo.getvalue()).decode("utf-8")
+        l_html = f'<img src="data:{logo.type};base64,{b64}" class="h-12 w-auto">'
+    else: 
+        l_html = f'<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl text-black" style="background-color:{brand}">L</div>'
+    
+    bc = {"color": brand, "logo": l_html, "header_top": htop, "header_bottom": hbot}
+    st.divider()
+    
+    modo = st.radio("Modo de Saída:", ["1️⃣ Super Aula Interativa (HTML5)", "2️⃣ MP4 Simples (Só Vídeos)"])
+    tts_mode = st.radio("Voz:", ["Edge-TTS (Free)", "ElevenLabs (Premium)"])
+    v_id = st.text_input("Voice ID", "JBFqnCBsd6RMkjVDRZzb")
+    tc = {"provider": tts_mode, "voice_id": v_id}
+
+tab1, tab2 = st.tabs(["🎬 Criador Direto (IA)", "🎓 Exemplo Hardcoded (NR-33)"])
+
+with tab1:
+    st.title("🎬 Gerador de Super Aulas")
+    if 'course_data' not in st.session_state: 
+        st.session_state['course_data'] = []
+        
+    tema = st.text_input("O que vamos ensinar hoje?", placeholder="Ex: Gestão de Projetos Ágeis...")
+    
+    st.markdown("### Integração Prática")
+    col_g1, col_g2 = st.columns(2)
+    with col_g1:
+        tem_game = st.checkbox("Incluir um Game/Simulador no meio da aula?", value=False)
+    with col_g2:
+        game_url = st.text_input("Link do Simulador", "[https://game.sabergestao.com.br/embed/](https://game.sabergestao.com.br/embed/)...")
+        game_title = st.text_input("Título do Simulador", "Desafio Prático")
+
+    if st.button("🧠 1. Gerar Super Aula Completa", use_container_width=True):
+        with st.spinner("IA arquitetando Vídeos, Quizzes e Interações..."):
+            res = generate_course_with_gemini(tema, tem_game, game_url, game_title)
+            if res and isinstance(res, list): 
+                st.session_state['course_data'] = res
+                st.rerun()
+            else:
+                st.error("A IA não retornou o formato esperado. Tente novamente.")
+    
+    if st.session_state['course_data']:
+        st.markdown("### 📝 Linha do Tempo da Aula")
+        
+        new_course_data = []
+        layouts_list = ["hero","pillars","philosophy","side_by_side","metrics","team","timeline","features_grid","quote","compare","title_only","ending"]
+        
+        # LOOP DINÂMICO PARA OS MÚLTIPLOS TIPOS DE BLOCOS
+        for b_idx, block in enumerate(st.session_state['course_data']):
+            if block["type"] == "video":
+                st.markdown(f"#### 🎬 Bloco de Vídeo {b_idx+1}")
+                new_scenes = []
+                for s_idx, scene in enumerate(block.get("scenes", [])):
+                    with st.expander(f"Cena {s_idx+1} ({scene.get('layout', 'hero').upper()})", expanded=False):
+                        col1, col2 = st.columns([2, 1])
+                        with col1:
+                            nar = st.text_area(f"Fala", value=scene.get('narration_text', ''), key=f"b{b_idx}_s{s_idx}_n")
+                            tit = st.text_input(f"Título", value=scene.get('title',''), key=f"b{b_idx}_s{s_idx}_t")
+                            hig = st.text_input(f"Destaque Neon", value=scene.get('highlight',''), key=f"b{b_idx}_s{s_idx}_h")
+                        with col2:
+                            c_lay = scene.get('layout', 'hero')
+                            idx_lay = layouts_list.index(c_lay) if c_lay in layouts_list else 0
+                            lay = st.selectbox("Layout", layouts_list, index=idx_lay, key=f"b{b_idx}_s{s_idx}_l")
+                            img = st.text_input("Imagem URL", value=scene.get('image_url',''), key=f"b{b_idx}_s{s_idx}_img")
+                        
+                        scene['narration_text'] = nar; scene['title'] = tit; scene['highlight'] = hig
+                        scene['layout'] = lay; scene['image_url'] = img
+                        new_scenes.append(scene)
+                
+                block["scenes"] = new_scenes
+                new_course_data.append(block)
+
+            elif block["type"] == "quiz":
+                st.markdown(f"#### 🧠 Bloco de Quiz {b_idx+1}")
+                new_questions = []
+                for q_idx, q in enumerate(block.get("questions", [])):
+                    with st.expander(f"Pergunta {q_idx+1}", expanded=False):
+                        perg = st.text_input("Pergunta", value=q.get('question',''), key=f"b{b_idx}_q{q_idx}_pq")
+                        exp_cor = st.text_area("Explicação do Acerto", value=q.get('explanation_correct',''), key=f"b{b_idx}_q{q_idx}_ec")
+                        
+                        q['question'] = perg; q['explanation_correct'] = exp_cor
+                        new_questions.append(q)
+                block["questions"] = new_questions
+                new_course_data.append(block)
+
+            elif block["type"] == "game":
+                st.markdown(f"#### 🕹️ Bloco de Simulador {b_idx+1}")
+                with st.expander(f"Configuração do Game", expanded=False):
+                    g_url = st.text_input("URL do Frame", value=block.get('url',''), key=f"b{b_idx}_g_u")
+                    g_tit = st.text_input("Título", value=block.get('title',''), key=f"b{b_idx}_g_t")
+                    block['url'] = g_url; block['title'] = g_tit
+                new_course_data.append(block)
+
+        # Atualiza a memória de forma segura
+        st.session_state['course_data'] = new_course_data
+
+        st.divider()
+        if st.button("🚀 2. Renderizar Aula", type="primary", use_container_width=True):
+            cleanup_temp()
+            if "1️⃣" in modo:
+                render_super_aula_html(st.session_state['course_data'], tc, bc)
+            else:
+                render_mp4_video(st.session_state['course_data'], tc)
+
+with tab2:
+    st.title("🎓 Super Aula Hardcoded: PET NR-33")
+    SUPER_AULA = [
+        {
+            "type": "video",
+            "scenes": [
+                {
+                    "layout": "hero", "image_url": "[https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200](https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200)", 
+                    "kicker": "NR 33: Segurança em Espaço Confinado", "title": "A PET", "highlight": "PERMISSÃO DE TRABALHO", 
+                    "subtitle": "O documento que separa a vida do acidente fatal.", 
+                    "narration_text": "Em espaços confinados, o perigo é invisível. A PET não é apenas um papel, mas um protocolo rigoroso de sobrevivência."
+                },
+                {
+                    "layout": "philosophy", "image_url": "[https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=1200](https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=1200)", 
+                    "title": "Um Processo Vivo", "paragraphs": ["A PET encerra-se ao final de cada turno de trabalho.", "Qualquer saída requer uma nova validação."], 
+                    "narration_text": "Entenda que a PET tem validade curta. Se o turno acabou ou a equipe saiu, o processo recomeça do zero."
+                }
+            ]
+        },
+        {
+            "type": "quiz",
+            "questions": [
+                {
+                    "question": "A PET pode ser utilizada para vários turnos de trabalho diferentes?",
+                    "options": ["Sim, desde que o trabalho seja o mesmo.", "Não, ela deve ser encerrada ao final do turno."],
+                    "answer": "Não, ela deve ser encerrada ao final do turno.",
+                    "explanation_correct": "A validade da PET é estritamente atrelada ao turno, garantindo que as condições não mudaram.",
+                    "hints": ["O ambiente de um espaço confinado é dinâmico."]
+                }
+            ]
+        },
+        {
+            "type": "game",
+            "title": "🕹️ SIMULADOR: GATE KEEPER",
+            "url": "[https://game.sabergestao.com.br/embed/unified/gate-keeper-v1-moslttly](https://game.sabergestao.com.br/embed/unified/gate-keeper-v1-moslttly)"
+        },
+        {
+            "type": "video",
+            "scenes": [
+                {
+                    "layout": "ending", "image_url": "[https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200](https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200)", 
+                    "title": "Missão", "highlight": "CUMPRIDA.", "contact": "Segurança do Trabalho", "website": "Treinamento Concluído", 
+                    "narration_text": "Você concluiu o treinamento sobre PET da NR 33. Proteja-se e proteja seus colegas. Até a próxima."
+                }
+            ]
+        }
+    ]
+    if st.button("🔥 Compilar NR-33", type="primary"):
+        render_super_aula_html(SUPER_AULA, tc, bc)    except Exception as e:
         st.error(f"Erro Gemini: {e}")
         return None
 
