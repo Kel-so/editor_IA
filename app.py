@@ -46,6 +46,12 @@ def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_ti
     Atue como um Diretor de Arte e Designer Instrucional "Premium Apple-style". 
     Sua missão é criar o JSON de um CURSO INTERATIVO COMPLETO E PROFUNDO sobre: {tema_texto}
     
+    REGRAS DE IMAGENS (MUITO IMPORTANTE - LEIA COM ATENÇÃO):
+    Para a chave "image_url" de CADA cena, você DEVE gerar uma URL dinâmica buscando imagens em inglês sobre o assunto da cena.
+    Formato OBRIGATÓRIO: "https://image.pollinations.ai/prompt/{{palavra1+palavra2}}?width=1200&height=800&nologo=true"
+    Exemplo: "https://image.pollinations.ai/prompt/futuristic+innovation+technology?width=1200&height=800&nologo=true"
+    ATENÇÃO ABSOLUTA: NUNCA use formatação markdown para links. Retorne APENAS a URL crua como string. Nada de [url](url).
+
     ESTRUTURA OBRIGATÓRIA DO RETORNO (DEVOLVA APENAS UM ARRAY JSON PURO):
     [
       {{
@@ -53,7 +59,7 @@ def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_ti
         "scenes": [
           {{
             "layout": "hero",
-            "image_url": "url_unsplash_valida",
+            "image_url": "https://image.pollinations.ai/prompt/modern+artificial+intelligence+brain?width=1200&height=800&nologo=true",
             "kicker": "MÓDULO 1",
             "title": "TITULO",
             "highlight": "DESTAQUE",
@@ -98,7 +104,7 @@ def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_ti
     LEMBRE-SE: Retorne APENAS um Array em formato JSON. Sem marcações Markdown (```json).
     """
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
         response = model.generate_content(
             prompt, 
             generation_config=genai.GenerationConfig(response_mime_type="application/json")
@@ -135,7 +141,7 @@ def gen_audio_sync(text, filepath, tts_config):
             audio_generator = client.text_to_speech.convert(
                 text=clean_text, 
                 voice_id=voice_id, 
-                model_id="eleven_turbo_v2_5", 
+                model_id="eleven_multilingual_v2", 
                 output_format="mp3_44100_128"
             )
             with open(filepath, "wb") as f:
