@@ -35,33 +35,33 @@ def generate_script_with_gemini(tema_texto):
     
     prompt = f"""
     Atue como um Roteirista Sênior, Diretor de Arte e Especialista em Masterclasses "Premium Apple-style". 
-    Sua missão é criar um roteiro JSON de uma AULA/MASTERCLASS profunda, envolvente e rica em detalhes sobre o seguinte tema: {tema_texto}
+    Sua missão é criar um roteiro JSON de uma AULA/MASTERCLASS profunda e dinâmica sobre: {tema_texto}
     
-    DIRETRIZES DE STORYTELLING E SINCRONIA:
-    - O conteúdo não deve ser raso ou corporativo genérico. Entregue insights reais, dados interessantes e uma narrativa que prenda a atenção (estilo documentário/aula magna).
-    - O áudio (narration_text) de cada cena deve ser fluido, profundo e durar cerca de 20 segundos (~50-60 palavras).
-    - Os sub_slides DEVEM ter uma conexão visual direta com o que o narrador está falando naquele momento. Se ele fala de "duas opções", use o layout "compare". Se fala de "resultado", use "metrics".
+    DIRETRIZES DE STORYTELLING E SINCRONIA (A REGRA DOS 8 SEGUNDOS):
+    - Cada cena terá exatamente um áudio curto e direto ao ponto de ~8 segundos (cerca de 20-25 palavras).
+    - Para CADA cena, você deve definir exatamente UM layout visual que combine 100% com o áudio.
     
     REGRAS CRÍTICAS DE ESTRUTURA JSON:
     1. O JSON DEVE ser um objeto com a chave raiz "scenes". Ex: {{"scenes": [...]}}
-    2. Cada "scene" TEM que ter 'sub_slides' com exatamente 4 a 5 elementos visuais para trocar durante o áudio.
-    3. NÃO use a chave "data". Coloque as propriedades diretamente na raiz do sub_slide.
+    2. NÃO crie listas de 'sub_slides'. A própria "scene" é o slide.
+    3. Coloque as propriedades do layout (layout, image_url, title, etc) DIRETAMENTE na raiz da scene, junto com 'narration_text'.
+    4. NÃO use a chave "data".
     
-    CATÁLOGO DE LAYOUTS (Use as chaves exatas mostradas aqui e abuse da criatividade nos textos):
-    - "hero": {{"layout": "hero", "image_url": "url_real_do_unsplash", "kicker": "CATEGORIA/AULA", "title": "TÍTULO IMPACTANTE", "highlight": "DESTAQUE NEON", "subtitle": "Subtítulo instigante"}}
-    - "pillars": {{"layout": "pillars", "image_url": "url_real", "items": [{{"emoji": "🧠", "title": "Conceito 1", "desc": "Explicação profunda"}}]}} (Exatamente 3 itens)
-    - "philosophy": {{"layout": "philosophy", "image_url": "url_real", "title": "Mudança de Paradigma", "paragraphs": ["Parágrafo denso 1", "Parágrafo denso 2"]}}
-    - "side_by_side": {{"layout": "side_by_side", "image_url": "url_real", "side_image": "url_lateral_real", "title": "Análise", "subtitle": "Contexto", "list_items": ["Ponto A", "Ponto B"]}}
-    - "metrics": {{"layout": "metrics", "image_url": "url_real", "metrics": [{{"value": "99%", "label": "Impacto Real", "color": "text-brand"}}]}} (Exatamente 4 itens)
-    - "team": {{"layout": "team", "image_url": "url_real", "title": "Protagonistas", "members": [{{"name": "Nome", "role": "Papel Histórico/Técnico", "avatar": "url"}}]}} (Exatamente 3 items)
-    - "timeline": {{"layout": "timeline", "image_url": "url_real", "title": "Evolução", "events": [{{"year": "Fase 1", "event": "O Início", "desc": "Contexto histórico"}}]}} (Exatamente 4 itens)
-    - "features_grid": {{"layout": "features_grid", "image_url": "url_real", "features": ["Conceito A", "Conceito B", "Conceito C", "Conceito D", "Conceito E", "Conceito F"]}} (Exatamente 6 itens)
-    - "quote": {{"layout": "quote", "image_url": "url_real", "quote_text": "Frase genial e inspiradora sobre o tema.", "author": "Autor Real ou Especialista", "role": "Contexto do Autor"}}
-    - "compare": {{"layout": "compare", "image_url": "url_real", "bad_title": "O Passado/Problema", "bad_items": ["Erro 1", "Erro 2"], "good_title": "O Futuro/Solução", "good_items": ["Acerto 1", "Acerto 2"]}}
-    - "title_only": {{"layout": "title_only", "image_url": "url_real", "title": "Frase de Impacto Absoluto que resume a cena."}}
-    - "ending": {{"layout": "ending", "image_url": "url_real", "title": "Qual será o seu", "highlight": "Próximo Passo?", "contact": "contato@masterclass.com", "website": "www.masterclass.com"}}
+    CATÁLOGO DE LAYOUTS (Use as chaves exatas mostradas aqui dentro de cada scene):
+    - "hero": {{"narration_text": "...", "layout": "hero", "image_url": "url", "kicker": "CATEGORIA", "title": "TÍTULO IMPACTANTE", "highlight": "DESTAQUE NEON", "subtitle": "Subtítulo instigante"}}
+    - "pillars": {{"narration_text": "...", "layout": "pillars", "image_url": "url", "items": [{{"emoji": "🧠", "title": "Conceito 1", "desc": "Explicação"}}]}} (Exatamente 3 itens)
+    - "philosophy": {{"narration_text": "...", "layout": "philosophy", "image_url": "url", "title": "Mudança", "paragraphs": ["P1", "P2"]}}
+    - "side_by_side": {{"narration_text": "...", "layout": "side_by_side", "image_url": "url", "side_image": "url_lateral", "title": "Análise", "subtitle": "Contexto", "list_items": ["Ponto A", "Ponto B"]}}
+    - "metrics": {{"narration_text": "...", "layout": "metrics", "image_url": "url", "metrics": [{{"value": "99%", "label": "Impacto", "color": "text-brand"}}]}} (Exatamente 4 itens)
+    - "team": {{"narration_text": "...", "layout": "team", "image_url": "url", "title": "Protagonistas", "members": [{{"name": "Nome", "role": "Papel", "avatar": "url"}}]}} (Exatamente 3 items)
+    - "timeline": {{"narration_text": "...", "layout": "timeline", "image_url": "url", "title": "Evolução", "events": [{{"year": "Fase 1", "event": "O Início", "desc": "Contexto"}}]}} (Exatamente 4 itens)
+    - "features_grid": {{"narration_text": "...", "layout": "features_grid", "image_url": "url", "features": ["A", "B", "C", "D", "E", "F"]}} (Exatamente 6 itens)
+    - "quote": {{"narration_text": "...", "layout": "quote", "image_url": "url", "quote_text": "Frase genial", "author": "Autor", "role": "Contexto"}}
+    - "compare": {{"narration_text": "...", "layout": "compare", "image_url": "url", "bad_title": "O Passado", "bad_items": ["Erro 1"], "good_title": "O Futuro", "good_items": ["Acerto 1"]}}
+    - "title_only": {{"narration_text": "...", "layout": "title_only", "image_url": "url", "title": "Frase de Impacto Absoluto"}}
+    - "ending": {{"narration_text": "...", "layout": "ending", "image_url": "url", "title": "Qual será o seu", "highlight": "Próximo Passo?", "contact": "contato@empresa.com", "website": "www.empresa.com"}}
 
-    Construa uma Masterclass de 3 a 4 cenas (cerca de 1 minuto a 1:20 de narração total).
+    Construa de 6 a 8 cenas rápidas.
     Responda apenas o JSON.
     """
 
@@ -104,12 +104,12 @@ def gen_audio_sync(text, filepath, tts_config):
 
 
 # ==========================================
-# MOTOR 1: WEB PLAYER HTML5 LUMINAL MAX (Cores Dinâmicas)
+# MOTOR 1: WEB PLAYER HTML5 LUMINAL MAX 
 # ==========================================
-def build_luminal_slide(sub_slide, total_index):
-    img_url = sub_slide.get("image_url", "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2000")
-    layout = sub_slide.get("layout", "title_only")
-    p = sub_slide.get("data", sub_slide) 
+def build_luminal_slide(slide_data, total_index):
+    img_url = slide_data.get("image_url", "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2000")
+    layout = slide_data.get("layout", "title_only")
+    p = slide_data.get("data", slide_data) 
     
     content = ""
     
@@ -166,7 +166,6 @@ def build_luminal_slide(sub_slide, total_index):
         m_html = ""
         for i, m in enumerate(p.get("metrics", [])[:4]):
             color_class = m.get("color", "text-brand")
-            # Força o uso da cor brand se usar as antigas do prompt
             if "blue-500" in color_class: color_class = "text-brand"
             m_html += f"""
             <div class="glass-card text-center animate-in delay-{i+1}">
@@ -276,7 +275,6 @@ def render_html_player(roteiro, tts_config, brand_config):
     progress = st.progress(0)
     
     scenes = roteiro.get("scenes", [])
-    total_idx = 0
     
     for i, scene in enumerate(scenes):
         st.write(f"🎙️ A processar Cena {i+1}/{len(scenes)}...")
@@ -286,13 +284,9 @@ def render_html_player(roteiro, tts_config, brand_config):
         clip = AudioFileClip(path)
         audio_clips.append(clip)
         
-        subs = scene.get("sub_slides", [])
-        time_per = (clip.duration * 1000) / len(subs) if subs else 0
-        
-        for sub in subs:
-            slides_html += build_luminal_slide(sub, total_idx)
-            durations.append(int(time_per))
-            total_idx += 1
+        # 1 Cena = 1 Áudio = 1 Slide
+        slides_html += build_luminal_slide(scene, i)
+        durations.append(int(clip.duration * 1000))
             
         progress.progress((i+1)/len(scenes))
 
@@ -402,12 +396,12 @@ def render_html_player(roteiro, tts_config, brand_config):
 
         <div class="progress-bar-container"><div id="progress-fill"></div></div>
 
-        <!-- Header Dinâmico com Logo -->
+        <!-- Header Dinâmico com Logo e Textos Personalizados -->
         <header class="fixed top-10 left-10 z-50 flex items-center gap-6">
             [[LOGO_HTML]]
             <div>
-                <div class="text-[10px] font-bold tracking-[0.5em] uppercase opacity-40">Pitch Deck Elite</div>
-                <div class="text-sm font-medium text-brand">Luminal AI Engine</div>
+                <div class="text-[10px] font-bold tracking-[0.5em] uppercase opacity-40">[[HEADER_TOP]]</div>
+                <div class="text-sm font-medium text-brand">[[HEADER_BOTTOM]]</div>
             </div>
         </header>
 
@@ -486,7 +480,9 @@ def render_html_player(roteiro, tts_config, brand_config):
                           .replace("[[SLIDES]]", slides_html) \
                           .replace("[[DURS]]", json.dumps(durations)) \
                           .replace("[[BRAND_COLOR]]", brand_config["color"]) \
-                          .replace("[[LOGO_HTML]]", brand_config["logo"])
+                          .replace("[[LOGO_HTML]]", brand_config["logo"]) \
+                          .replace("[[HEADER_TOP]]", brand_config["header_top"]) \
+                          .replace("[[HEADER_BOTTOM]]", brand_config["header_bottom"])
                           
     components.html(final_html, height=850, scrolling=False)
 
@@ -539,19 +535,29 @@ with st.sidebar:
     
     st.divider()
     st.markdown("### 🎨 Identidade Visual")
-    # Inicia com o verde neon que pediu
+    
+    # Textos do Header
+    header_top = st.text_input("Texto Superior", "Pitch Deck Elite")
+    header_bottom = st.text_input("Texto Inferior", "Luminal AI Engine")
+    
     brand_color = st.color_picker("Cor de Destaque", "#8ef736")
     logo_file = st.file_uploader("Upload da Logo (PNG/JPG)", type=["png", "jpg", "jpeg", "svg"])
     
     if logo_file:
-        logo_b64 = base64.b64encode(logo_file.read()).decode("utf-8")
+        # getvalue() impede que o arquivo venha vazio se for lido duas vezes
+        logo_b64 = base64.b64encode(logo_file.getvalue()).decode("utf-8")
         logo_mime = logo_file.type
         logo_html = f'<img src="data:{logo_mime};base64,{logo_b64}" class="h-12 w-auto object-contain">'
     else:
         # Logo padrão com a cor selecionada
         logo_html = f'<div class="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg text-black" style="background-color: {brand_color};">L</div>'
     
-    brand_config = {"color": brand_color, "logo": logo_html}
+    brand_config = {
+        "color": brand_color, 
+        "logo": logo_html,
+        "header_top": header_top,
+        "header_bottom": header_bottom
+    }
     
     st.divider()
     tts = st.radio("Voz:", ["Edge-TTS (Free)", "ElevenLabs (Premium)"])
@@ -575,7 +581,30 @@ if 'script' in st.session_state:
         st.code(st.session_state['script'], language="json")
 
 st.divider()
-final_json = st.text_area("Roteiro Final (Cole o JSON aqui):", height=300)
+
+# JSON padrão ajustado para a nova estrutura (1 Cena = 1 Áudio = 1 Layout)
+DEFAULT_JSON = {
+  "project_name": "Projeto_Hibrido_TURBO",
+  "scenes": [
+    {
+      "narration_text": "Bem-vindo ao novo formato turbo. Oito segundos de áudio, direto ao ponto.",
+      "layout": "hero",
+      "kicker": "SISTEMA ATUALIZADO",
+      "title": "LUMINAL",
+      "highlight": "TURBO",
+      "subtitle": "1 Cena = 1 Áudio = 1 Slide.",
+      "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200"
+    }
+  ]
+}
+
+if os.path.exists("ia_educacao_premium.json"):
+    with open("ia_educacao_premium.json", "r", encoding="utf-8") as f:
+        default_val = f.read()
+else:
+    default_val = json.dumps(DEFAULT_JSON, indent=2, ensure_ascii=False)
+
+final_json = st.text_area("Roteiro Final (Cole o JSON aqui):", value=default_val, height=300)
 
 if st.button("🚀 2. Renderizar Projeto", type="primary", use_container_width=True):
     cleanup_temp()
