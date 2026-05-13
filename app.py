@@ -104,7 +104,7 @@ def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_ti
     LEMBRE-SE: Retorne APENAS um Array em formato JSON. Sem marcações Markdown (```json).
     """
     try:
-        model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(
             prompt, 
             generation_config=genai.GenerationConfig(response_mime_type="application/json")
