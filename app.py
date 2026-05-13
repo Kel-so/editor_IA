@@ -23,7 +23,7 @@ def cleanup_temp():
     os.makedirs("temp_files", exist_ok=True)
 
 # ==========================================
-# INTEGRAÇÃO GEMINI 2.5 FLASH (Cérebro do Roteiro)
+# INTEGRAÇÃO GEMINI 3.1 FLASH (Cérebro do Roteiro)
 # ==========================================
 def generate_script_with_gemini(tema_texto):
     api_key = st.secrets.get("GEMINI_API_KEY", "")
@@ -31,46 +31,38 @@ def generate_script_with_gemini(tema_texto):
         st.error("🚨 Chave do Gemini (GEMINI_API_KEY) não encontrada nos secrets!")
         return None
         
-    # Configura a biblioteca oficial do Google com a sua chave
     genai.configure(api_key=api_key)
     
     prompt = f"""
-    Atue como um Diretor de Arte e Copywriter. 
-    Transforme o seguinte texto/tema em um roteiro de apresentação em formato JSON.
-    Tema: {tema_texto}
+    Atue como um Diretor de Arte e Copywriter de apresentações "Premium Apple-style". 
+    Crie um roteiro JSON baseado neste tema: {tema_texto}
     
     REGRAS DE ESTRUTURA:
     1. Crie uma lista de "scenes".
-    2. Cada "scene" representa um bloco de áudio de ~20 segundos (cerca de 50 a 60 palavras) em 'narration_text'.
-    3. Dentro de CADA "scene", DEVE haver exatamente uma lista chamada 'sub_slides' com 5 elementos.
-    4. Cada 'sub_slide' representa uma troca de tela visual. Use URLs reais de imagens do Unsplash relacionadas ao contexto em 'image_url'.
-    5. 'layout' pode ser: "hero" (precisa de title, highlight, subtitle), "pillars" (precisa de 3 itens com emoji, titulo e desc), "quote" (precisa de quote_text, author, role).
+    2. Cada "scene" é um bloco de áudio contínuo de ~20 segundos (cerca de 50-60 palavras) em 'narration_text'.
+    3. Dentro de CADA "scene", DEVE haver uma lista 'sub_slides' com 4 a 5 elementos visuais para trocar durante o áudio.
+    4. Cada 'sub_slide' PRECISA ter 'image_url' (URL do Unsplash) e um 'layout' escolhido do catálogo abaixo.
     
-    Exemplo de saída:
-    {{
-      "project_name": "Pitch_Luminal",
-      "scenes": [
-        {{
-          "narration_text": "O texto que o narrador vai falar continuamente durante 20 segundos... Explicando a visão e o futuro.",
-          "sub_slides": [
-            {{"layout": "hero", "title": "VISÃO", "highlight": "2026", "subtitle": "Arquitetura de inovação.", "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200"}},
-            {{"layout": "pillars", "items": [{{"emoji": "🚀", "title": "Velocidade", "desc": "Rápido"}}, {{"emoji": "🛡️", "title": "Seguro", "desc": "Forte"}}, {{"emoji": "🌐", "title": "Global", "desc": "Mundo"}}], "image_url": "https://images.unsplash.com/..."}},
-            {{"layout": "quote", "quote_text": "Inovação é o que fazemos.", "author": "Steve Jobs", "role": "CEO", "image_url": "https://..."}},
-            {{"layout": "hero", "title": "DADOS", "highlight": "REAIS", "subtitle": "Decisões precisas.", "image_url": "https://..."}},
-            {{"layout": "hero", "title": "O FUTURO", "highlight": "É AGORA", "subtitle": "Venha conosco.", "image_url": "https://..."}}
-          ]
-        }}
-      ]
-    }}
-    
-    Responda APENAS com o JSON válido, sem markdown extra.
+    CATÁLOGO DE LAYOUTS E SUAS CHAVES OBRIGATÓRIAS (Respeite exatamente estas chaves para cada layout escolhido):
+    - "hero": {{"kicker": "TEXTO PEQUENO TOPO", "title": "TITULO GRANDE", "highlight": "TEXTO EM DESTAQUE AZUL", "subtitle": "Descrição embaixo"}}
+    - "pillars": {{"items": [{{"emoji": "🛡️", "title": "Segurança", "desc": "Proteção total"}}]}} (Exatamente 3 itens)
+    - "philosophy": {{"title": "Nossa Essência", "paragraphs": ["Parágrafo 1", "Parágrafo 2"]}}
+    - "side_by_side": {{"side_image": "url_imagem_aqui", "title": "Decisões de Dados", "subtitle": "Intro curta", "list_items": ["Análise", "Dashboards"]}}
+    - "metrics": {{"metrics": [{{"value": "98%", "label": "Satisfação", "color": "text-blue-500"}}]}} (Exatamente 4 itens, cores: text-blue-500, text-purple-500, text-emerald-500, text-orange-500)
+    - "team": {{"title": "Liderança", "members": [{{"name": "Erik", "role": "CEO", "avatar": "https://i.pravatar.cc/150?u=1"}}]}} (Exatamente 3 items)
+    - "timeline": {{"title": "Jornada", "events": [{{"year": "2021", "event": "Fundação", "desc": "Início"}}]}} (Exatamente 4 itens)
+    - "features_grid": {{"features": ["API Nativa", "Segurança", "Multi-Cloud", "Suporte", "Design", "Análise"]}} (Exatamente 6 itens)
+    - "quote": {{"quote_text": "A frase", "author": "Steve Jobs", "role": "Visão"}}
+    - "compare": {{"bad_title": "Cenário Antigo", "bad_items": ["Processos Manuais", "Lento"], "good_title": "Nossa Solução", "good_items": ["Automação IA", "Rápido"]}}
+    - "title_only": {{"title": "Nossa Expansão Global"}}
+    - "ending": {{"title": "Vamos construir o", "highlight": "Próximo Nível?", "contact": "contato@empresa.com", "website": "www.empresa.com"}}
+
+    Use sua criatividade para misturar os layouts e entregar uma apresentação incrivelmente dinâmica.
+    Responda APENAS com o JSON válido.
     """
 
     try:
-        # Chama direto o 3.1-flash usando a SDK oficial
         model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
-        
-        # Força o formato de resposta em JSON
         response = model.generate_content(
             prompt,
             generation_config=genai.GenerationConfig(
@@ -83,7 +75,7 @@ def generate_script_with_gemini(tema_texto):
         return None
 
 # ==========================================
-# MOTOR DE VOZ (EDGE-TTS vs ELEVENLABS)
+# MOTOR DE VOZ
 # ==========================================
 def gen_audio_sync(text, filepath, tts_config):
     provider = tts_config.get("provider", "Edge-TTS")
@@ -121,24 +113,27 @@ def gen_audio_sync(text, filepath, tts_config):
 
 
 # ==========================================
-# MOTOR 1: WEB PLAYER HTML5 (O TEMPLATE LUMINAL)
+# MOTOR 1: WEB PLAYER HTML5 LUMINAL MAX
 # ==========================================
 def build_luminal_slide(sub_slide, total_index):
-    layout = sub_slide.get("layout", "hero")
+    layout = sub_slide.get("layout", "title_only")
     img_url = sub_slide.get("image_url", "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2000")
     
+    content = ""
+    
     if layout == "hero":
-        title = sub_slide.get("title", "TÍTULO")
-        highlight = sub_slide.get("highlight", "DESTAQUE")
-        subtitle = sub_slide.get("subtitle", "Descrição da cena vai aqui...")
-        
+        kicker = sub_slide.get("kicker", "Apresentação Estratégica")
+        title = sub_slide.get("title", "VISÃO")
+        highlight = sub_slide.get("highlight", "2024")
+        subtitle = sub_slide.get("subtitle", "Arquitetura de inovação e escalabilidade.")
         content = f"""
         <div class="text-center max-w-5xl">
-            <h2 class="animate-up delay-1 text-blue-500 font-bold tracking-[0.6em] uppercase text-xs mb-6">Insight Estratégico</h2>
+            <h2 class="animate-up delay-1 text-blue-500 font-bold tracking-[0.6em] uppercase text-xs mb-6">{kicker}</h2>
             <h1 class="animate-up delay-2 text-7xl md:text-9xl font-black mb-10 leading-tight">{title} <br><span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600">{highlight}</span></h1>
             <p class="animate-up delay-3 text-xl text-gray-400 font-light mb-12 max-w-2xl mx-auto leading-relaxed">{subtitle}</p>
         </div>
         """
+        
     elif layout == "pillars":
         items = sub_slide.get("items", [])
         cards = ""
@@ -148,12 +143,123 @@ def build_luminal_slide(sub_slide, total_index):
             <div class="glass-card animate-up delay-{delay}">
                 <div class="text-4xl mb-6">{item.get('emoji', '🔹')}</div>
                 <h3 class="text-2xl font-bold mb-4">{item.get('title', 'Pilar')}</h3>
-                <p class="text-gray-400 leading-relaxed">{item.get('desc', 'Detalhe do pilar')}</p>
+                <p class="text-gray-400 leading-relaxed">{item.get('desc', 'Detalhe')}</p>
             </div>
             """
         content = f'<div class="max-w-7xl w-full grid md:grid-cols-3 gap-12">{cards}</div>'
+        
+    elif layout == "philosophy":
+        title = sub_slide.get("title", "Nossa Essência")
+        paragraphs = sub_slide.get("paragraphs", [])
+        p_html = "".join([f'<p class="animate-up delay-{i+2}">{p}</p>' for i, p in enumerate(paragraphs)])
+        content = f"""
+        <div class="max-w-4xl glass-card animate-in delay-1">
+            <h2 class="text-5xl font-black mb-10 text-blue-500">{title}</h2>
+            <div class="space-y-8 text-gray-300 text-xl leading-relaxed">{p_html}</div>
+        </div>
+        """
+        
+    elif layout == "side_by_side":
+        side_img = sub_slide.get("side_image", "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1000")
+        title = sub_slide.get("title", "Decisões de Dados").replace("\n", "<br>")
+        subtitle = sub_slide.get("subtitle", "Transformando ruído em clareza.")
+        list_items = sub_slide.get("list_items", [])
+        
+        colors = ["text-blue-400", "text-emerald-400", "text-purple-400"]
+        bg_colors = ["bg-blue-500/20", "bg-emerald-500/20", "bg-purple-500/20"]
+        
+        li_html = ""
+        for i, item in enumerate(list_items):
+            c_txt = colors[i % len(colors)]
+            c_bg = bg_colors[i % len(bg_colors)]
+            li_html += f"""
+            <li class="flex items-center gap-4 {c_txt} font-bold">
+                <span class="w-8 h-8 {c_bg} rounded-full flex items-center justify-center text-xs text-white">0{i+1}</span>
+                {item}
+            </li>
+            """
+            
+        content = f"""
+        <div class="max-w-7xl w-full grid md:grid-cols-2 gap-20 items-center">
+            <div class="animate-in delay-1 rounded-[40px] overflow-hidden h-[600px] shadow-2xl">
+                <img src="{side_img}" class="w-full h-full object-cover">
+            </div>
+            <div class="space-y-8">
+                <h2 class="animate-up delay-2 text-6xl font-black leading-tight">{title}</h2>
+                <p class="animate-up delay-3 text-gray-400 text-xl">{subtitle}</p>
+                <ul class="space-y-6 animate-up delay-4">{li_html}</ul>
+            </div>
+        </div>
+        """
+        
+    elif layout == "metrics":
+        metrics = sub_slide.get("metrics", [])
+        m_html = ""
+        for i, m in enumerate(metrics[:4]):
+            val = m.get("value", "0")
+            lbl = m.get("label", "Métrica")
+            col = m.get("color", "text-blue-500")
+            m_html += f"""
+            <div class="glass-card text-center animate-in delay-{i+1}">
+                <div class="text-6xl font-black {col} mb-4">{val}</div>
+                <div class="text-xs uppercase tracking-widest opacity-40">{lbl}</div>
+            </div>
+            """
+        content = f'<div class="max-w-7xl w-full grid grid-cols-2 md:grid-cols-4 gap-8">{m_html}</div>'
+
+    elif layout == "team":
+        title = sub_slide.get("title", "Liderança Executiva")
+        members = sub_slide.get("members", [])
+        m_html = ""
+        for i, m in enumerate(members[:3]):
+            name = m.get("name", "Nome")
+            role = m.get("role", "Cargo")
+            av = m.get("avatar", "https://i.pravatar.cc/150")
+            m_html += f"""
+            <div class="glass-card text-center animate-up delay-{i+2}">
+                <div class="w-32 h-32 rounded-full mx-auto mb-8 border-4 border-blue-500/30 overflow-hidden">
+                    <img src="{av}" alt="{name}">
+                </div>
+                <h4 class="text-2xl font-bold">{name}</h4>
+                <p class="text-blue-400">{role}</p>
+            </div>
+            """
+        content = f"""
+        <div class="max-w-6xl w-full">
+            <h2 class="text-center text-4xl font-bold mb-16 animate-up delay-1">{title}</h2>
+            <div class="grid md:grid-cols-3 gap-12">{m_html}</div>
+        </div>
+        """
+
+    elif layout == "timeline":
+        title = sub_slide.get("title", "Nossa Jornada")
+        events = sub_slide.get("events", [])
+        e_html = ""
+        for i, e in enumerate(events[:4]):
+            yr = e.get("year", "2024")
+            ev = e.get("event", "Evento")
+            desc = e.get("desc", "Descrição")
+            e_html += f"""
+            <div class="glass-card animate-in delay-{i+2}">
+                <div class="text-blue-500 font-bold text-sm mb-2">{yr}</div>
+                <h5 class="font-bold">{ev}</h5>
+                <p class="text-xs text-gray-500 mt-4">{desc}</p>
+            </div>
+            """
+        content = f"""
+        <div class="max-w-6xl w-full">
+            <h2 class="text-4xl font-bold mb-16 animate-up delay-1">{title}</h2>
+            <div class="grid md:grid-cols-4 gap-6">{e_html}</div>
+        </div>
+        """
+
+    elif layout == "features_grid":
+        feats = sub_slide.get("features", [])
+        f_html = "".join([f'<div class="glass-card animate-up delay-{i+1}">{f}</div>' for i, f in enumerate(feats[:6])])
+        content = f'<div class="max-w-7xl w-full grid grid-cols-2 md:grid-cols-3 gap-8">{f_html}</div>'
+
     elif layout == "quote":
-        quote = sub_slide.get("quote_text", "Inovação é o que nos move.")
+        quote = sub_slide.get("quote_text", "Inovação nos move.")
         author = sub_slide.get("author", "Visionário")
         role = sub_slide.get("role", "Líder")
         content = f"""
@@ -166,11 +272,48 @@ def build_luminal_slide(sub_slide, total_index):
             </div>
         </div>
         """
-    else:
-        # Fallback
-        content = f'<h1 class="text-5xl font-bold">{sub_slide.get("title", "Apresentação")}</h1>'
 
-    # O HTML de cada cena menor
+    elif layout == "compare":
+        bt = sub_slide.get("bad_title", "Cenário Antigo")
+        bi = sub_slide.get("bad_items", [])
+        gt = sub_slide.get("good_title", "Solução Luminal")
+        gi = sub_slide.get("good_items", [])
+        
+        b_html = "".join([f"<li>✕ {b}</li>" for b in bi])
+        g_html = "".join([f"<li>✓ {g}</li>" for g in gi])
+        
+        content = f"""
+        <div class="max-w-6xl w-full grid md:grid-cols-2 gap-px bg-white/5 rounded-[40px] overflow-hidden border border-white/10">
+            <div class="glass-card !rounded-none !bg-red-500/5 p-16 animate-in delay-1">
+                <h3 class="text-3xl font-bold mb-8 text-red-400">{bt}</h3>
+                <ul class="space-y-6 opacity-60">{b_html}</ul>
+            </div>
+            <div class="glass-card !rounded-none !bg-emerald-500/5 p-16 animate-in delay-2">
+                <h3 class="text-3xl font-bold mb-8 text-emerald-400">{gt}</h3>
+                <ul class="space-y-6">{g_html}</ul>
+            </div>
+        </div>
+        """
+
+    elif layout == "ending":
+        title = sub_slide.get("title", "Vamos construir o")
+        highlight = sub_slide.get("highlight", "Próximo Nível?")
+        contact = sub_slide.get("contact", "contato@email.com")
+        website = sub_slide.get("website", "www.site.com")
+        content = f"""
+        <div class="text-center">
+            <h2 class="animate-up delay-1 text-7xl font-black mb-12">{title} <br><span class="text-blue-500">{highlight}</span></h2>
+            <div class="glass-card inline-block text-left animate-in delay-2">
+                <p class="text-blue-400 font-bold mb-2">{contact}</p>
+                <p class="text-gray-400">{website}</p>
+            </div>
+        </div>
+        """
+
+    else: # title_only
+        title = sub_slide.get("title", "Título Principal")
+        content = f'<h2 class="text-6xl text-center font-black animate-up delay-1">{title}</h2>'
+
     return f"""
     <section class="slide" data-index="{total_index}">
         <div class="bg-container"><img src="{img_url}" alt="bg"></div>
@@ -182,7 +325,7 @@ def build_luminal_slide(sub_slide, total_index):
 def render_html_player(roteiro, tts_config):
     audio_clips = []
     slides_html = ""
-    durations_array = [] # Armazena o tempo em milissegundos de cada sub-slide
+    durations_array = []
     
     progress_bar = st.progress(0)
     total_scenes = len(roteiro["scenes"])
@@ -190,15 +333,13 @@ def render_html_player(roteiro, tts_config):
     total_sub_slides_count = 0
     
     for idx, scene in enumerate(roteiro["scenes"]):
-        st.write(f"🎙️ Gerando narração bloco {idx+1}...")
+        st.write(f"🎙️ Processando áudio e cena {idx+1}...")
         
-        # 1. Gera o áudio longo (ex: 20s)
         audio_path = f"temp_files/audio_{idx}.mp3"
         gen_audio_sync(scene["narration_text"], audio_path, tts_config)
         clip = AudioFileClip(audio_path)
         audio_clips.append(clip)
         
-        # 2. Divide a duração do áudio pelo número de sub_slides
         sub_slides = scene.get("sub_slides", [])
         if not sub_slides: continue
         
@@ -211,7 +352,7 @@ def render_html_player(roteiro, tts_config):
             
         progress_bar.progress((idx + 1) / total_scenes)
 
-    st.write("🎬 Compilando Masterclass...")
+    st.write("🎬 Gerando Masterclass Interativa...")
     final_audio = concatenate_audioclips(audio_clips)
     final_audio_path = "temp_files/final_audio.mp3"
     final_audio.write_audiofile(final_audio_path, logger=None)
@@ -250,6 +391,8 @@ def render_html_player(roteiro, tts_config):
             .delay-2 { transition-delay: 0.5s; }
             .delay-3 { transition-delay: 0.8s; }
             .delay-4 { transition-delay: 1.1s; }
+            .delay-5 { transition-delay: 1.4s; }
+            .delay-6 { transition-delay: 1.7s; }
             
             .progress-bar-container { position: fixed; top: 0; left: 0; width: 100%; height: 4px; background: rgba(255,255,255,0.05); z-index: 100; }
             #progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #6366f1); width: 0%; transition: width 0.1s linear; }
@@ -299,10 +442,8 @@ def render_html_player(roteiro, tts_config):
                 let target = 0;
                 let globalDuration = durations.reduce((a,b)=>a+b,0);
                 
-                // Atualiza barra superior
                 progressFill.style.width = `${(now / globalDuration) * 100}%`;
 
-                // Acha em qual slide estamos
                 for(let i=0; i<durations.length; i++) {
                     const start = acc;
                     const end = acc + durations[i];
@@ -311,7 +452,7 @@ def render_html_player(roteiro, tts_config):
                         break;
                     }
                     if (now >= end && i === durations.length - 1) {
-                        target = i; // crava no último se passar
+                        target = i;
                     }
                     acc = end;
                 }
@@ -334,16 +475,6 @@ def render_html_player(roteiro, tts_config):
 
 
 # ==========================================
-# MOTOR 2: RENDERIZADOR MP4 (Clássico Simples)
-# ==========================================
-# Mantido simples porque transições Luminal complexas no MoviePy precisariam de centenas de linhas de máscara.
-def render_mp4_video(roteiro, tts_config):
-    # Lógica clássica (ignorando sub_slides, usa apenas o texto principal pra não quebrar)
-    st.info("Papo reto: O design Luminal (Glassmorphism e Blurs) funciona apenas no HTML5. O MP4 será exportado com um visual flat simples.")
-    st.stop() # Parei por aqui pra não gerar lixo. O foco agora é o player HTML.
-
-
-# ==========================================
 # UI STREAMLIT PRINCIPAL
 # ==========================================
 st.set_page_config(page_title="Luminal Master IA", layout="wide")
@@ -352,7 +483,7 @@ with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4370/4370757.png", width=60)
     st.title("Settings")
     
-    modo_render = st.radio("Modo de Saída:", ["1️⃣ Web Player (Luminal HTML5)"])
+    modo_render = st.radio("Modo de Saída:", ["1️⃣ Web Player (Luminal HTML5 Max)"])
     
     st.divider()
     tts_provider = st.radio("Voz:", ["Edge-TTS (Free)", "ElevenLabs (Premium)"])
@@ -361,22 +492,48 @@ with st.sidebar:
     
     tts_config = {"provider": tts_provider, "api_key": eleven_key, "voice_id": eleven_voice}
 
-st.title("✨ Criação Luminal com Gemini")
-st.markdown("Deixe o Gemini criar as cenas e subdividir o áudio pra você.")
+st.title("✨ Criação Luminal MAX com Gemini")
+st.markdown("Deixe o Gemini mastigar o texto e criar a estrutura visual com TODOS os 12 layouts para você.")
 
 tema = st.text_area("Sobre o que é a apresentação?", "O impacto da Inteligência Artificial no mercado financeiro global até 2030.")
 
 if st.button("🧠 1. Gerar Roteiro Mágico (Gemini)", use_container_width=True):
-    with st.spinner("Conectando ao Gemini..."):
+    with st.spinner("Conectando ao Gemini 3.1 Flash Lite..."):
         script_json = generate_script_with_gemini(tema)
         if script_json:
-            st.session_state['roteiro_json'] = script_json
-            st.success("Roteiro criado!")
+            st.session_state['generated_script'] = script_json
+            st.success("Roteiro criado com sucesso!")
 
-default_json = st.session_state.get('roteiro_json', "{\n  // Gere com a IA primeiro ou cole aqui seu JSON\n}")
-json_input = st.text_area("Roteiro Final (Formato Luminal Sub-slides):", value=default_json, height=400)
+if 'generated_script' in st.session_state:
+    with st.expander("✅ Ver Roteiro Gerado pelo Gemini", expanded=True):
+        st.markdown("Copie o código abaixo clicando no ícone no canto superior direito do bloco e cole na caixa de edição final.")
+        st.code(st.session_state['generated_script'], language="json")
 
-if st.button("🎬 2. Renderizar Apresentação", type="primary", use_container_width=True):
+st.divider()
+
+DEFAULT_JSON = {
+  "project_name": "Projeto_Hibrido_MAX",
+  "scenes": [
+    {
+      "narration_text": "Cole aqui o JSON gerado pelo Gemini ou crie o seu próprio usando a estrutura Luminal completa.",
+      "sub_slides": [
+        {"layout": "hero", "kicker": "SISTEMA ATUALIZADO", "title": "LUMINAL", "highlight": "MAX", "subtitle": "Todos os layouts ativos.", "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200"},
+        {"layout": "title_only", "title": "Basta gerar com o Gemini e colar abaixo.", "image_url": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200"}
+      ]
+    }
+  ]
+}
+
+if os.path.exists("ia_educacao_premium.json"):
+    with open("ia_educacao_premium.json", "r", encoding="utf-8") as f:
+        default_val = f.read()
+else:
+    default_val = json.dumps(DEFAULT_JSON, indent=2, ensure_ascii=False)
+
+st.markdown("### 📝 Roteiro Final")
+json_input = st.text_area("Cole aqui o JSON gerado acima para rodar a apresentação:", value=default_val, height=400)
+
+if st.button("🎬 2. Renderizar Apresentação Completa", type="primary", use_container_width=True):
     try:
         roteiro = json.loads(json_input)
     except Exception as e:
