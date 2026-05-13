@@ -77,9 +77,11 @@ def generate_script_with_gemini(tema_texto):
 def gen_audio_sync(text, filepath, tts_config):
     provider = tts_config.get("provider", "Edge-TTS")
     
-    # Tratamento contra o "corte seco" no final do áudio
+    # TRATAMENTO DO BUG DE CORTE E SOM ESTRANHO:
+    # Removemos o " . . ." que confundia a IA.
+    # Garantimos que a frase termine com pontuação para a voz baixar naturalmente.
     clean_text = text.strip()
-    if clean_text and not clean_text[-1] in ['.', '!', '?']:
+    if clean_text and clean_text[-1] not in ['.', '!', '?']:
         clean_text += "."
     
     if "ElevenLabs" in provider:
@@ -326,36 +328,23 @@ def build_luminal_slide(slide_data, total_index):
 # MOTOR DO EDITOR CLÁSSICO HTML (Aba 1)
 # ==========================================
 def render_html_player(scenes, tts_config, brand_config):
-    audio_clips = []
+    audio_srcs = []
     slides_html = ""
-    durations = []
     progress = st.progress(0)
     
-    # Criador de silencio fisico (1 segundo) para evitar cortes
-    silence_array = np.zeros((44100, 2))
-    silence_clip = AudioArrayClip(silence_array, fps=44100)
-    
+    # NOVA LÓGICA: Não usamos mais o MoviePy para a Web. 
+    # O HTML vai tocar os áudios um por um nativamente. Zero cortes.
+    st.write("🎙️ Gerando Áudios...")
     for i, scene in enumerate(scenes):
-        st.write(f"🎙️ Processando Cena {i+1}/{len(scenes)}...")
         path = f"temp_files/audio_{i}.mp3"
         gen_audio_sync(scene.get("narration_text", "Texto não encontrado"), path, tts_config)
         
-        clip = AudioFileClip(path)
-        audio_clips.append(clip)
-        audio_clips.append(silence_clip) # Injeta 1s de silêncio obrigatório
-        
-        slides_html += build_luminal_slide(scene, i)
-        # O slide dura o tempo do áudio + 1s do silêncio
-        durations.append(int(clip.duration * 1000) + 1000) 
+        with open(path, "rb") as f:
+            audio_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+            audio_srcs.append(audio_b64)
             
+        slides_html += build_luminal_slide(scene, i)
         progress.progress((i+1)/len(scenes))
-
-    st.write("🎬 Compilando Apresentação...")
-    final_audio = concatenate_audioclips(audio_clips)
-    final_audio.write_audiofile("temp_files/final_classic.mp3", logger=None)
-    
-    with open("temp_files/final_classic.mp3", "rb") as f:
-        audio_b64 = base64.b64encode(f.read()).decode('utf-8')
 
     html_code = f"""
     <!DOCTYPE html>
@@ -494,20 +483,20 @@ def render_html_player(scenes, tts_config, brand_config):
             </div>
         </header>
         
-        <audio id="audio" src="data:audio/mp3;base64,{audio_b64}"></audio>
+        <audio id="audio"></audio>
         
         <main class="relative h-screen w-full overflow-hidden">
             {slides_html}
         </main>
         
         <script>
+            const audioSrcs = {json.dumps(audio_srcs)};
             const audio = document.getElementById('audio');
             const slides = document.querySelectorAll('.slide');
-            const durations = {json.dumps(durations)};
-            let currentSlide = -1;
-            let animationFrameId;
+            let currentSlide = 0;
 
-            function playWithFadeIn() {{
+            function playAudioFadeIn(src) {{
+                audio.src = src;
                 audio.volume = 0; 
                 audio.play();
                 let vol = 0;
@@ -521,51 +510,38 @@ def render_html_player(scenes, tts_config, brand_config):
                 }}, 50);
             }}
 
+            function playScene() {{
+                if(currentSlide >= audioSrcs.length) {{
+                    document.getElementById('replay-overlay').style.display = 'flex';
+                    return;
+                }}
+                
+                // Muda o slide
+                slides.forEach(s => s.classList.remove('active'));
+                if(slides[currentSlide]) slides[currentSlide].classList.add('active');
+                
+                // Atualiza Barra de Progresso
+                document.getElementById('progress-fill').style.width = ((currentSlide / audioSrcs.length) * 100) + '%';
+
+                // Toca o áudio e espera ele fisicamente acabar
+                playAudioFadeIn(audioSrcs[currentSlide]);
+                
+                audio.onended = () => {{
+                    currentSlide++;
+                    setTimeout(playScene, 1000); // Exato 1 SEGUNDO DE RESPIRO
+                }};
+            }}
+
             function startPresentation() {{ 
                 document.getElementById('start-overlay').style.display = 'none'; 
-                playWithFadeIn(); 
-                update(); 
+                currentSlide = 0;
+                playScene(); 
             }}
             
             function replayPresentation() {{ 
                 document.getElementById('replay-overlay').style.display = 'none'; 
-                audio.currentTime = 0; 
-                currentSlide = -1; 
-                playWithFadeIn(); 
-                update(); 
-            }}
-            
-            function update() {{
-                const now = audio.currentTime * 1000;
-                let acc = 0; 
-                let target = 0;
-                let globalDuration = durations.reduce((a,b)=>a+b,0);
-                
-                document.getElementById('progress-fill').style.width = `${{(now / globalDuration) * 100}}%`;
-                
-                for(let i=0; i<durations.length; i++) {{
-                    if (now >= acc && now < acc + durations[i]) {{ 
-                        target = i; 
-                        break; 
-                    }}
-                    acc += durations[i];
-                }}
-                
-                if (target !== currentSlide) {{
-                    if(currentSlide >= 0 && slides[currentSlide]) {{ 
-                        slides[currentSlide].classList.remove('active'); 
-                    }}
-                    currentSlide = target;
-                    if(slides[currentSlide]) {{ 
-                        slides[currentSlide].classList.add('active'); 
-                    }}
-                }}
-                
-                if (audio.ended) {{
-                    document.getElementById('replay-overlay').style.display = 'flex';
-                }} else {{
-                    animationFrameId = requestAnimationFrame(update);
-                }}
+                currentSlide = 0;
+                playScene(); 
             }}
         </script>
     </body>
@@ -584,10 +560,6 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     progress = st.progress(0)
     cleanup_temp()
 
-    # Criador de silencio fisico (1 segundo) para evitar cortes entre slides nos blocos de vídeo
-    silence_array = np.zeros((44100, 2))
-    silence_clip = AudioArrayClip(silence_array, fps=44100)
-
     end_p = f"temp_files/sa_final_end.mp3"
     gen_audio_sync("Parabéns guerreiro! Você concluiu a masterclass com excelência. O diploma é seu.", end_p, tts_config)
     with open(end_p, "rb") as f: 
@@ -598,34 +570,24 @@ def render_super_aula_html(course_data, tts_config, brand_config):
         st.write(f"🎙️ Processando Bloco {idx+1}/{len(course_data)}...")
         
         if block["type"] == "video":
-            audio_clips = []
-            durations = []
+            audio_srcs = []
             slides_html = ""
             
             for s_idx, scene in enumerate(block["scenes"]):
                 p = f"temp_files/sa_v_{idx}_{s_idx}.mp3"
                 gen_audio_sync(scene.get("narration_text", ""), p, tts_config)
                 
-                clip = AudioFileClip(p)
-                audio_clips.append(clip)
-                audio_clips.append(silence_clip) # Respiro de 1s obrigatório
+                with open(p, "rb") as f: 
+                    b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+                    audio_srcs.append(b64)
                 
                 slides_html += build_luminal_slide(scene, total_global_slides)
-                durations.append(int(clip.duration * 1000) + 1000) # Adiciona 1s na duração do slide
                 total_global_slides += 1
-            
-            final_audio = concatenate_audioclips(audio_clips)
-            fa_p = f"temp_files/sa_block_{idx}.mp3"
-            final_audio.write_audiofile(fa_p, logger=None)
-            
-            with open(fa_p, "rb") as f: 
-                b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
                 
             js_course_data.append({
                 "type": "video", 
                 "layer_id": f"layer_{idx}", 
-                "audio_src": b64, 
-                "durations": durations
+                "audio_srcs": audio_srcs
             })
             html_layers += f"""
             <div id="layer_{idx}" class="video-layer" style="display:none; position:absolute; inset:0;">
@@ -636,18 +598,24 @@ def render_super_aula_html(course_data, tts_config, brand_config):
         elif block["type"] == "quiz":
             qs = []
             
-            # As 5 opções de inícios para acerto e para erro
-            intros_suc = ["Exatamente!", "Na mosca!", "Perfeito!", "Cirúrgico.", "Mandou muito bem!"]
+            # As 5 opções de inícios para acerto e para erro (Feedback Imersivo e Honesto)
+            intros_suc = [
+                "Exatamente!", 
+                "Na mosca!", 
+                "Perfeito!", 
+                "Cirúrgico.", 
+                "Mandou muito bem!"
+            ]
             intros_err = [
                 "Ops, não é bem por aí.", 
                 "Escorregou feio nessa.", 
                 "Não foi dessa vez.", 
                 "Quase, mas a lógica falhou.", 
-                "Incorreto. A memória te traiu."
+                "Incorreto. A memória te traiu dessa vez."
             ]
             
             for q_idx, q in enumerate(block["questions"]):
-                # Gera o áudio de sucesso com explicação completa
+                # Sucesso: Junta a intro sorteada com a explicação correta
                 exp_correct = q.get("explanation_correct", "Essa é a lógica correta.")
                 intro_s = np.random.choice(intros_suc)
                 suc_text = f"{intro_s} {exp_correct}"
@@ -657,13 +625,13 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                 with open(p_suc, "rb") as f:
                     suc_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
 
-                # Gera os áudios de erro (1 para cada dica na lista de 'hints')
+                # Erros: Para cada dica, cria um áudio de erro
                 err_b64_list = []
                 hints = q.get("hints", ["Revise o conceito e tente novamente."])
                 
                 for h_idx, hint in enumerate(hints):
                     intro_e = np.random.choice(intros_err)
-                    err_text = f"{intro_e} Uma dica: {hint}"
+                    err_text = f"{intro_e} Pensa comigo: {hint}"
                     
                     p_err = f"temp_files/sa_q_{idx}_{q_idx}_e_{h_idx}.mp3"
                     gen_audio_sync(err_text, p_err, tts_config)
@@ -883,7 +851,6 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             const endAudio = "{end_b64}";
             const aud = document.getElementById('aud'); 
             let current = 0; 
-            let animId;
 
             // Fades de áudio com limite de volume em 60%
             function playAudioFadeIn(src) {{
@@ -918,7 +885,6 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             }}
 
             function playStep() {{
-                cancelAnimationFrame(animId);
                 document.getElementById('quiz-overlay').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'none';
                 document.querySelectorAll('.video-layer').forEach(l => l.style.display = 'none');
@@ -933,12 +899,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                 if(step.type === 'video') {{
                     const layer = document.getElementById(step.layer_id); 
                     layer.style.display = 'block';
-                    playAudioFadeIn(step.audio_src);
-                    runVideo(step, layer);
-                    aud.onended = () => {{ 
-                        aud.onended = null; 
-                        nextStep(); 
-                    }};
+                    runVideoSequential(step, layer);
                 
                 }} else if(step.type === 'quiz') {{
                     document.getElementById('progress-fill').style.width = '100%';
@@ -951,33 +912,32 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                 }}
             }}
 
-            function runVideo(step, layer) {{
+            function runVideoSequential(step, layer) {{
                 const slides = layer.querySelectorAll('.slide'); 
-                let lastIdx = -1;
-                function update() {{
-                    const now = aud.currentTime * 1000; 
-                    let acc = 0; 
-                    let target = 0;
-                    let global = step.durations.reduce((a,b)=>a+b,0);
-                    
-                    document.getElementById('progress-fill').style.width = (now/global*100)+'%';
-                    
-                    for(let i=0; i<step.durations.length; i++) {{
-                        if (now >= acc && now < acc + step.durations[i]) {{ 
-                            target = i; 
-                            break; 
-                        }}
-                        acc += step.durations[i];
+                let sceneIdx = 0;
+                
+                function playNextScene() {{
+                    if (sceneIdx >= step.audio_srcs.length) {{
+                        nextStep();
+                        return;
                     }}
                     
-                    if (target !== lastIdx) {{
-                        if(lastIdx >= 0 && slides[lastIdx]) slides[lastIdx].classList.remove('active');
-                        lastIdx = target; 
-                        if(slides[lastIdx]) slides[lastIdx].classList.add('active');
-                    }}
-                    animId = requestAnimationFrame(update);
+                    slides.forEach(s => s.classList.remove('active'));
+                    if(slides[sceneIdx]) slides[sceneIdx].classList.add('active');
+                    
+                    // Atualiza a barra de progresso suavemente
+                    let baseProg = (current / data.length);
+                    let sceneProg = (sceneIdx / step.audio_srcs.length) * (1 / data.length);
+                    document.getElementById('progress-fill').style.width = ((baseProg + sceneProg) * 100) + '%';
+                    
+                    playAudioFadeIn(step.audio_srcs[sceneIdx]);
+                    
+                    aud.onended = () => {{
+                        sceneIdx++;
+                        setTimeout(playNextScene, 1000); // 1s RESPIRO GARANTIDO
+                    }};
                 }}
-                update();
+                playNextScene();
             }}
 
             function showQuiz(step, qIdx) {{
@@ -1007,7 +967,10 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                         if(i === q.answer_idx) {{
                             btn.classList.add('btn-pulse'); 
                             ind.innerText = "✅";
+                            
+                            // Toca a explicação de sucesso
                             playAudioFadeIn(q.audio_success); 
+                            
                             aud.onended = () => {{ 
                                 aud.onended = null; 
                                 btn.classList.remove('btn-pulse'); 
@@ -1021,7 +984,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                             btn.classList.add('btn-shake'); 
                             ind.innerText = "❌";
                             
-                            // Toca uma das dicas de erro geradas especificamente para essa pergunta
+                            // Toca uma dica de erro sorteada
                             const randomErr = q.audio_errors[Math.floor(Math.random() * q.audio_errors.length)];
                             playAudioFadeIn(randomErr); 
                             
@@ -1043,7 +1006,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     components.html(html_code, height=900, scrolling=False)
 
 # ==========================================
-# RENDERIZADOR MP4 
+# RENDERIZADOR MP4 (Aba 1)
 # ==========================================
 def render_mp4_video(scenes, tts_config):
     st.info("⚙️ Renderizando MP4...")
@@ -1054,11 +1017,19 @@ def render_mp4_video(scenes, tts_config):
         return
         
     progress = st.progress(0)
+    
+    # Criamos 1 segundo de silêncio para adicionar no MP4 também!
+    silence_array = np.zeros((44100, 2))
+    silence_clip = AudioArrayClip(silence_array, fps=44100)
+    
     for i, scene in enumerate(scenes):
         p = f"temp_files/m_{i}.mp3"
         gen_audio_sync(scene.get("narration_text", ""), p, tts_config)
         
         audio = AudioFileClip(p)
+        # Protegendo contra cortes do MoviePy injetando o silêncio no final do clipe
+        audio = concatenate_audioclips([audio, silence_clip])
+        
         base = ColorClip(size=(1280, 720), color=(15, 23, 42), duration=audio.duration).set_audio(audio)
         
         txt = scene.get("narration_text", "")[:60] + "..."
@@ -1076,7 +1047,7 @@ def render_mp4_video(scenes, tts_config):
     st.video("temp_files/output.mp4")
 
 # ==========================================
-# UI 
+# UI E INICIALIZAÇÃO
 # ==========================================
 st.set_page_config(page_title="Luminal Master", layout="wide")
 with st.sidebar:
