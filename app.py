@@ -34,29 +34,34 @@ def generate_script_with_gemini(tema_texto):
     genai.configure(api_key=api_key)
     
     prompt = f"""
-    Atue como um Diretor de Arte e Copywriter "Premium Apple-style". 
-    Crie um roteiro JSON baseado neste tema: {tema_texto}
+    Atue como um Roteirista Sênior, Diretor de Arte e Especialista em Masterclasses "Premium Apple-style". 
+    Sua missão é criar um roteiro JSON de uma AULA/MASTERCLASS profunda, envolvente e rica em detalhes sobre o seguinte tema: {tema_texto}
     
-    REGRAS CRÍTICAS:
+    DIRETRIZES DE STORYTELLING E SINCRONIA:
+    - O conteúdo não deve ser raso ou corporativo genérico. Entregue insights reais, dados interessantes e uma narrativa que prenda a atenção (estilo documentário/aula magna).
+    - O áudio (narration_text) de cada cena deve ser fluido, profundo e durar cerca de 20 segundos (~50-60 palavras).
+    - Os sub_slides DEVEM ter uma conexão visual direta com o que o narrador está falando naquele momento. Se ele fala de "duas opções", use o layout "compare". Se fala de "resultado", use "metrics".
+    
+    REGRAS CRÍTICAS DE ESTRUTURA JSON:
     1. O JSON DEVE ser um objeto com a chave raiz "scenes". Ex: {{"scenes": [...]}}
-    2. Cada "scene" é um bloco de áudio de ~20 segundos em 'narration_text'.
-    3. Cada "scene" TEM que ter 'sub_slides' com 4 a 5 elementos visuais para trocar durante o áudio.
-    4. NÃO use a chave "data". Coloque as propriedades diretamente na raiz do sub_slide.
+    2. Cada "scene" TEM que ter 'sub_slides' com exatamente 4 a 5 elementos visuais para trocar durante o áudio.
+    3. NÃO use a chave "data". Coloque as propriedades diretamente na raiz do sub_slide.
     
-    CATÁLOGO DE LAYOUTS (Use as chaves exatas mostradas aqui):
-    - "hero": {{"layout": "hero", "image_url": "url", "kicker": "TOPO", "title": "TITULO", "highlight": "DESTAQUE", "subtitle": "Desc"}}
-    - "pillars": {{"layout": "pillars", "image_url": "url", "items": [{{"emoji": "🛡️", "title": "Segurança", "desc": "Proteção"}}]}} (Exatamente 3 itens)
-    - "philosophy": {{"layout": "philosophy", "image_url": "url", "title": "Essência", "paragraphs": ["P1", "P2"]}}
-    - "side_by_side": {{"layout": "side_by_side", "image_url": "url", "side_image": "url", "title": "Titulo", "subtitle": "Sub", "list_items": ["A", "B"]}}
-    - "metrics": {{"layout": "metrics", "image_url": "url", "metrics": [{{"value": "98%", "label": "Taxa", "color": "text-brand"}}]}} (Exatamente 4 itens)
-    - "team": {{"layout": "team", "image_url": "url", "title": "Equipe", "members": [{{"name": "Nome", "role": "Cargo", "avatar": "url"}}]}} (Exatamente 3 items)
-    - "timeline": {{"layout": "timeline", "image_url": "url", "title": "Jornada", "events": [{{"year": "2024", "event": "Fato", "desc": "Desc"}}]}} (Exatamente 4 itens)
-    - "features_grid": {{"layout": "features_grid", "image_url": "url", "features": ["F1", "F2", "F3", "F4", "F5", "F6"]}} (Exatamente 6 itens)
-    - "quote": {{"layout": "quote", "image_url": "url", "quote_text": "Frase", "author": "Autor", "role": "Cargo"}}
-    - "compare": {{"layout": "compare", "image_url": "url", "bad_title": "Ruim", "bad_items": ["A"], "good_title": "Bom", "good_items": ["B"]}}
-    - "title_only": {{"layout": "title_only", "image_url": "url", "title": "Frase de Impacto"}}
-    - "ending": {{"layout": "ending", "image_url": "url", "title": "Vamos ao", "highlight": "Fim?", "contact": "email", "website": "site"}}
+    CATÁLOGO DE LAYOUTS (Use as chaves exatas mostradas aqui e abuse da criatividade nos textos):
+    - "hero": {{"layout": "hero", "image_url": "url_real_do_unsplash", "kicker": "CATEGORIA/AULA", "title": "TÍTULO IMPACTANTE", "highlight": "DESTAQUE NEON", "subtitle": "Subtítulo instigante"}}
+    - "pillars": {{"layout": "pillars", "image_url": "url_real", "items": [{{"emoji": "🧠", "title": "Conceito 1", "desc": "Explicação profunda"}}]}} (Exatamente 3 itens)
+    - "philosophy": {{"layout": "philosophy", "image_url": "url_real", "title": "Mudança de Paradigma", "paragraphs": ["Parágrafo denso 1", "Parágrafo denso 2"]}}
+    - "side_by_side": {{"layout": "side_by_side", "image_url": "url_real", "side_image": "url_lateral_real", "title": "Análise", "subtitle": "Contexto", "list_items": ["Ponto A", "Ponto B"]}}
+    - "metrics": {{"layout": "metrics", "image_url": "url_real", "metrics": [{{"value": "99%", "label": "Impacto Real", "color": "text-brand"}}]}} (Exatamente 4 itens)
+    - "team": {{"layout": "team", "image_url": "url_real", "title": "Protagonistas", "members": [{{"name": "Nome", "role": "Papel Histórico/Técnico", "avatar": "url"}}]}} (Exatamente 3 items)
+    - "timeline": {{"layout": "timeline", "image_url": "url_real", "title": "Evolução", "events": [{{"year": "Fase 1", "event": "O Início", "desc": "Contexto histórico"}}]}} (Exatamente 4 itens)
+    - "features_grid": {{"layout": "features_grid", "image_url": "url_real", "features": ["Conceito A", "Conceito B", "Conceito C", "Conceito D", "Conceito E", "Conceito F"]}} (Exatamente 6 itens)
+    - "quote": {{"layout": "quote", "image_url": "url_real", "quote_text": "Frase genial e inspiradora sobre o tema.", "author": "Autor Real ou Especialista", "role": "Contexto do Autor"}}
+    - "compare": {{"layout": "compare", "image_url": "url_real", "bad_title": "O Passado/Problema", "bad_items": ["Erro 1", "Erro 2"], "good_title": "O Futuro/Solução", "good_items": ["Acerto 1", "Acerto 2"]}}
+    - "title_only": {{"layout": "title_only", "image_url": "url_real", "title": "Frase de Impacto Absoluto que resume a cena."}}
+    - "ending": {{"layout": "ending", "image_url": "url_real", "title": "Qual será o seu", "highlight": "Próximo Passo?", "contact": "contato@masterclass.com", "website": "www.masterclass.com"}}
 
+    Construa uma Masterclass de 3 a 4 cenas (cerca de 1 minuto a 1:20 de narração total).
     Responda apenas o JSON.
     """
 
@@ -401,8 +406,8 @@ def render_html_player(roteiro, tts_config, brand_config):
         <header class="fixed top-10 left-10 z-50 flex items-center gap-6">
             [[LOGO_HTML]]
             <div>
-                <div class="text-[10px] font-bold tracking-[0.5em] uppercase opacity-40">Apresentação do Saber</div>
-                <div class="text-sm font-medium text-brand">Saber_IA</div>
+                <div class="text-[10px] font-bold tracking-[0.5em] uppercase opacity-40">Pitch Deck Elite</div>
+                <div class="text-sm font-medium text-brand">Luminal AI Engine</div>
             </div>
         </header>
 
