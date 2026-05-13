@@ -155,7 +155,7 @@ def gen_audio_sync(text, filepath, tts_config):
 # MOTOR VISUAL (CONSTRUTOR DE SLIDES HTML)
 # ==========================================
 def build_luminal_slide(slide_data, total_index):
-    img_url = slide_data.get("image_url", "[https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200](https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200)")
+    img_url = slide_data.get("image_url", "https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200")
     layout = slide_data.get("layout", "title_only")
     p = slide_data.get("data", slide_data)
     
@@ -258,7 +258,7 @@ def build_luminal_slide(slide_data, total_index):
             m_html += f"""
             <div class="glass-card text-center animate-up delay-{i+2}">
                 <div class="w-32 h-32 rounded-full mx-auto mb-8 border-4 border-brand/30 overflow-hidden">
-                    <img src="{m.get("avatar", "[https://i.pravatar.cc/150](https://i.pravatar.cc/150)")}" alt="av">
+                    <img src="{m.get("avatar", "https://i.pravatar.cc/150")}" alt="av">
                 </div>
                 <h4 class="text-2xl font-bold">{m.get("name", "Nome")}</h4>
                 <p class="text-brand/80">{m.get("role", "Cargo")}</p>
@@ -344,7 +344,7 @@ def build_luminal_slide(slide_data, total_index):
             </h2>
             <div class="glass-card inline-block text-left animate-in delay-2">
                 <p class="text-brand font-bold mb-2">{p.get("contact", "@contato")}</p>
-                <p class="text-gray-400">{p.get("website", "[www.site.com](https://www.site.com)")}</p>
+                <p class="text-gray-400">{p.get("website", "www.site.com")}</p>
             </div>
         </div>
         """
@@ -392,7 +392,7 @@ def render_html_player(scenes, tts_config, brand_config):
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {{ 
                 theme: {{ 
@@ -402,7 +402,7 @@ def render_html_player(scenes, tts_config, brand_config):
                 }} 
             }}
         </script>
-        <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap)" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
         <style>
             :root {{ 
                 --primary: {brand_config["color"]}; 
@@ -712,7 +712,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {{ 
                 theme: {{ 
@@ -722,7 +722,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                 }} 
             }}
         </script>
-        <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap)" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap" rel="stylesheet">
         <style>
             :root {{ 
                 --primary: {brand_config["color"]}; 
@@ -1141,7 +1141,7 @@ with tab1:
     with col_g1:
         tem_game = st.checkbox("Incluir um Game/Simulador no meio da aula?", value=False)
     with col_g2:
-        game_url = st.text_input("Link do Simulador", "[https://game.sabergestao.com.br/embed/](https://game.sabergestao.com.br/embed/)...")
+        game_url = st.text_input("Link do Simulador", "https://game.sabergestao.com.br/embed/...")
         game_title = st.text_input("Título do Simulador", "Desafio Prático")
 
     if st.button("🧠 1. Gerar Super Aula Completa", use_container_width=True):
