@@ -3,8 +3,6 @@ import streamlit.components.v1 as components
 import json
 import os
 import shutil
-import asyncio
-import edge_tts
 import base64
 import requests
 import numpy as np
@@ -21,11 +19,55 @@ def cleanup_temp():
         shutil.rmtree("temp_files")
     os.makedirs("temp_files", exist_ok=True)
 
-async def gen_audio(text, filepath):
-    """Gera áudio com IA (Edge TTS)."""
-    tts = edge_tts.Communicate(text, "pt-BR-AntonioNeural")
-    await tts.save(filepath)
-
+# ==========================================
+# MOTOR DE VOZ (EDGE-TTS vs ELEVENLABS)
+# ==========================================
+def gen_audio_sync(text, filepath, tts_config):
+    """Gera o áudio escolhendo entre a opção gratuita e a Premium."""
+    provider = tts_config.get("provider", "Edge-TTS")
+    
+    if "ElevenLabs" in provider:
+        try:
+            from elevenlabs.client import ElevenLabs
+        except ImportError:
+            st.error("Ops! Faltou instalar o pacote 'elevenlabs'. Roda um `pip install elevenlabs` aí ou adiciona no requirements.txt.")
+            st.stop()
+            
+        api_key = tts_config.get("api_key")
+        voice_id = tts_config.get("voice_id", "JBFqnCBsd6RMkjVDRZzb")
+        
+        if not api_key:
+            st.error("🚨 Chave da API do ElevenLabs não encontrada nos Secrets! Configure `ELEVENLABS_API_KEY` no seu Streamlit.")
+            st.stop()
+            
+        try:
+            client = ElevenLabs(api_key=api_key)
+            # Usando o multilingual_v2 para o sotaque ficar redondo em pt-br
+            audio_generator = client.text_to_speech.convert(
+                text=text,
+                voice_id=voice_id,
+                model_id="eleven_multilingual_v2", 
+                output_format="mp3_44100_128"
+            )
+            
+            with open(filepath, "wb") as f:
+                for chunk in audio_generator:
+                    if chunk:
+                        f.write(chunk)
+        except Exception as e:
+            st.error(f"A ElevenLabs chiou: {e}")
+            st.stop()
+            
+    else:
+        # Edge-TTS (Modo Guerreiro Gratuito)
+        import asyncio
+        import edge_tts
+        
+        async def _edge_gen(txt, path):
+            tts = edge_tts.Communicate(txt, "pt-BR-AntonioNeural")
+            await tts.save(path)
+            
+        asyncio.run(_edge_gen(text, filepath))
 
 # ==========================================
 # MOTOR 1: WEB PLAYER HTML5 (O mais rápido)
@@ -108,7 +150,7 @@ def build_slide_html(idx, cena, dur_ms):
     </div>
     """
 
-def render_html_player(roteiro):
+def render_html_player(roteiro, tts_config):
     audio_clips = []
     slides_html = ""
     progress_bar = st.progress(0)
@@ -117,7 +159,7 @@ def render_html_player(roteiro):
     for idx, cena in enumerate(roteiro["scenes"]):
         st.write(f"🎭 A montar HTML cena {idx+1}: {cena.get('overlay_text', '...')}")
         audio_path = f"temp_files/audio_{idx}.mp3"
-        asyncio.run(gen_audio(cena["text"], audio_path))
+        gen_audio_sync(cena["text"], audio_path, tts_config)
         clip = AudioFileClip(audio_path)
         audio_clips.append(clip)
         dur_ms = int(clip.duration * 1000)
@@ -130,7 +172,6 @@ def render_html_player(roteiro):
     with open(final_audio_path, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode('utf-8')
     
-    # Template HTML puro, sem ser f-string, para não quebrar as cores do teu editor!
     html_template = """
     <!DOCTYPE html>
     <html lang="pt-br">
@@ -226,9 +267,7 @@ def render_html_player(roteiro):
     </html>
     """
     
-    # Injetamos os dados de forma segura sem rebentar com a sintaxe do teu editor
     html_final = html_template.replace("[[AUDIO_B64]]", audio_b64).replace("[[SLIDES_HTML]]", slides_html)
-    
     st.success("✅ Apresentação Motion renderizada!")
     components.html(html_final, height=900, scrolling=False)
 
@@ -298,7 +337,7 @@ def create_text_overlay(text):
     draw.multiline_text((padding, padding), text, font=font, fill="white", align="left")
     return np.array(img)
 
-def render_mp4_video(roteiro):
+def render_mp4_video(roteiro, tts_config):
     clips_finais = []
     progress_bar = st.progress(0)
     total_scenes = len(roteiro["scenes"])
@@ -307,17 +346,15 @@ def render_mp4_video(roteiro):
         st.write(f"⚙️ A renderizar MP4 cena {idx+1}...")
         
         audio_path = f"temp_files/audio_{idx}.mp3"
-        asyncio.run(gen_audio(cena["text"], audio_path))
+        gen_audio_sync(cena["text"], audio_path, tts_config)
         audio_clip = AudioFileClip(audio_path)
         duration = audio_clip.duration
         
-        # Fallback ColorClip se for usar sem imagens dinâmicas
         color = (20, 60, 120) if cena.get("type", "worker") == "worker" else (120, 40, 40)
         base_clip = ColorClip(size=(1280, 720), color=color, duration=duration)
         base_clip = base_clip.set_audio(audio_clip)
         layers = [base_clip]
         
-        # Pega o texto principal da cena (do antigo overlay_text ou title)
         texto_tela = cena.get("overlay_text", "")
         if not texto_tela:
             texto_tela = f"CENA {idx+1}"
@@ -356,17 +393,39 @@ st.set_page_config(page_title="Ilha de Edição Híbrida", layout="wide")
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/4370/4370757.png", width=80)
     st.title("Configurações")
-    st.markdown("Escolha o motor de renderização.")
+    
+    st.markdown("### 🎬 Motor de Vídeo")
     modo_render = st.radio(
         "Modo de Saída:",
         ["1️⃣ Web Player (HTML5 Dinâmico)", "2️⃣ Vídeo Real (Gerar .MP4)"]
     )
+    
     st.divider()
-    st.markdown("**Nota:** O modo MP4 usa o motor clássico (ColorClip + PIL), enquanto o HTML5 usa o design imersivo avançado.")
+    st.markdown("### 🎙️ Motor de Voz")
+    tts_provider = st.radio("Escolha a qualidade:", ["Edge-TTS (Gratuito)", "ElevenLabs (Premium)"])
+    
+    elevenlabs_api_key = ""
+    elevenlabs_voice_id = ""
+    
+    if "ElevenLabs" in tts_provider:
+        # Puxa a chave cravada nos Secrets
+        elevenlabs_api_key = st.secrets.get("ELEVENLABS_API_KEY", "")
+        
+        if elevenlabs_api_key:
+            st.success("✅ Chave da ElevenLabs carregada dos Secrets.")
+        else:
+            st.error("⚠️ ELEVENLABS_API_KEY não está no `st.secrets`. Configure no `.streamlit/secrets.toml` ou no painel do Streamlit Cloud.")
+            
+        elevenlabs_voice_id = st.text_input("ID da Voz (Voice ID)", value="JBFqnCBsd6RMkjVDRZzb", help="Encontre os IDs na sua biblioteca da ElevenLabs.")
+        
+    tts_config = {
+        "provider": tts_provider,
+        "api_key": elevenlabs_api_key,
+        "voice_id": elevenlabs_voice_id
+    }
 
 st.title("🎬 Ilha de Edição Multimotor")
 
-# Tenta carregar o último JSON premium (IA na Educação) ou joga um padrãozinho
 DEFAULT_JSON = {
   "project_name": "Projeto_Hibrido",
   "scenes": [
@@ -401,8 +460,8 @@ if st.button(f"🚀 Iniciar: {modo_render}", type="primary", use_container_width
     
     # Roteamento Mágico
     if "Web Player" in modo_render:
-        st.info("A iniciar motor HTML5... (Foco em velocidade e CSS avançado)")
-        render_html_player(roteiro)
+        st.info("A iniciar motor HTML5 com o áudio selecionado...")
+        render_html_player(roteiro, tts_config)
     else:
-        st.info("A iniciar motor MoviePy... (Foco em gerar ficheiro MP4 final para download)")
-        render_mp4_video(roteiro)
+        st.info("A iniciar motor MoviePy para gerar o MP4...")
+        render_mp4_video(roteiro, tts_config)
