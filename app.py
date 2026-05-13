@@ -46,6 +46,12 @@ def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_ti
     Atue como um Diretor de Arte e Designer Instrucional "Premium Apple-style". 
     Sua missão é criar o JSON de um CURSO INTERATIVO COMPLETO E PROFUNDO sobre: {tema_texto}
     
+    REGRAS DE IMAGENS (MUITO IMPORTANTE):
+    Para a chave "image_url" de CADA cena, você DEVE gerar uma URL dinâmica buscando imagens altamente relacionadas ao assunto exato que está sendo falado na cena.
+    Use o formato passando de 3 a 4 palavras-chave em inglês separadas por "+":
+    Formato OBRIGATÓRIO: "https://image.pollinations.ai/prompt/{{palavra1+palavra2+palavra3}}?width=1200&height=800&nologo=true"
+    Exemplo: Se a cena fala sobre inovação, use "https://image.pollinations.ai/prompt/futuristic+innovation+technology?width=1200&height=800&nologo=true"
+    
     ESTRUTURA OBRIGATÓRIA DO RETORNO (DEVOLVA APENAS UM ARRAY JSON PURO):
     [
       {{
@@ -53,7 +59,7 @@ def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_ti
         "scenes": [
           {{
             "layout": "hero",
-            "image_url": "url_unsplash_valida",
+            "image_url": "https://image.pollinations.ai/prompt/modern+artificial+intelligence+brain?width=1200&height=800&nologo=true",
             "kicker": "MÓDULO 1",
             "title": "TITULO",
             "highlight": "DESTAQUE",
@@ -82,20 +88,20 @@ def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_ti
     ]
 
     CATÁLOGO DE LAYOUTS DE VÍDEO (REGRAS CRÍTICAS DE CHAVES):
-    - "hero": {{"narration_text": "...", "layout": "hero", "image_url": "url", "kicker": "...", "title": "...", "highlight": "...", "subtitle": "..."}}
-    - "pillars": {{"narration_text": "...", "layout": "pillars", "image_url": "url", "items": [{{"emoji": "🧠", "title": "T", "desc": "D"}}]}} (Exatamente 3 itens)
-    - "philosophy": {{"narration_text": "...", "layout": "philosophy", "image_url": "url", "title": "T", "paragraphs": ["P1", "P2"]}}
-    - "side_by_side": {{"narration_text": "...", "layout": "side_by_side", "image_url": "url", "side_image": "url_lateral", "title": "T", "subtitle": "S", "list_items": ["L1", "L2"]}}
-    - "metrics": {{"narration_text": "...", "layout": "metrics", "image_url": "url", "metrics": [{{"value": "99%", "label": "L", "color": "text-brand"}}]}} (Exatamente 4 itens)
-    - "team": {{"narration_text": "...", "layout": "team", "image_url": "url", "title": "T", "members": [{{"name": "N", "role": "R", "avatar": "url"}}]}} (Exatamente 3 items)
-    - "timeline": {{"narration_text": "...", "layout": "timeline", "image_url": "url", "title": "T", "events": [{{"year": "Y", "event": "E", "desc": "D"}}]}} (Exatamente 4 itens)
-    - "features_grid": {{"narration_text": "...", "layout": "features_grid", "image_url": "url", "features": ["F1", "F2", "F3", "F4", "F5", "F6"]}} (Exatamente 6 itens)
-    - "quote": {{"narration_text": "...", "layout": "quote", "image_url": "url", "quote_text": "Q", "author": "A", "role": "R"}}
-    - "compare": {{"narration_text": "...", "layout": "compare", "image_url": "url", "bad_title": "BT", "bad_items": ["B1"], "good_title": "GT", "good_items": ["G1"]}}
-    - "title_only": {{"narration_text": "...", "layout": "title_only", "image_url": "url", "title": "T"}}
-    - "ending": {{"narration_text": "...", "layout": "ending", "image_url": "url", "title": "T", "highlight": "H", "contact": "contato", "website": "site"}}
+    - "hero": {{"narration_text": "...", "layout": "hero", "image_url": "...", "kicker": "...", "title": "...", "highlight": "...", "subtitle": "..."}}
+    - "pillars": {{"narration_text": "...", "layout": "pillars", "image_url": "...", "items": [{{"emoji": "🧠", "title": "T", "desc": "D"}}]}} (Exatamente 3 itens)
+    - "philosophy": {{"narration_text": "...", "layout": "philosophy", "image_url": "...", "title": "T", "paragraphs": ["P1", "P2"]}}
+    - "side_by_side": {{"narration_text": "...", "layout": "side_by_side", "image_url": "...", "side_image": "...", "title": "T", "subtitle": "S", "list_items": ["L1", "L2"]}}
+    - "metrics": {{"narration_text": "...", "layout": "metrics", "image_url": "...", "metrics": [{{"value": "99%", "label": "L", "color": "text-brand"}}]}} (Exatamente 4 itens)
+    - "team": {{"narration_text": "...", "layout": "team", "image_url": "...", "title": "T", "members": [{{"name": "N", "role": "R", "avatar": "url"}}]}} (Exatamente 3 items)
+    - "timeline": {{"narration_text": "...", "layout": "timeline", "image_url": "...", "title": "T", "events": [{{"year": "Y", "event": "E", "desc": "D"}}]}} (Exatamente 4 itens)
+    - "features_grid": {{"narration_text": "...", "layout": "features_grid", "image_url": "...", "features": ["F1", "F2", "F3", "F4", "F5", "F6"]}} (Exatamente 6 itens)
+    - "quote": {{"narration_text": "...", "layout": "quote", "image_url": "...", "quote_text": "Q", "author": "A", "role": "R"}}
+    - "compare": {{"narration_text": "...", "layout": "compare", "image_url": "...", "bad_title": "BT", "bad_items": ["B1"], "good_title": "GT", "good_items": ["G1"]}}
+    - "title_only": {{"narration_text": "...", "layout": "title_only", "image_url": "...", "title": "T"}}
+    - "ending": {{"narration_text": "...", "layout": "ending", "image_url": "...", "title": "T", "highlight": "H", "contact": "contato", "website": "site"}}
 
-    LEMBRE-SE: Retorne APENAS um Array em formato JSON. Sem marcações Markdown (```json).
+    LEMBRE-SE: Retorne APENAS um Array em formato JSON. Sem marcações Markdown (```json). Certifique-se que cada image_url tem as keywords exatas daquela cena.
     """
     try:
         model = genai.GenerativeModel("gemini-2.5-flash")
@@ -155,7 +161,7 @@ def gen_audio_sync(text, filepath, tts_config):
 # MOTOR VISUAL (CONSTRUTOR DE SLIDES HTML)
 # ==========================================
 def build_luminal_slide(slide_data, total_index):
-    img_url = slide_data.get("image_url", "https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200")
+    img_url = slide_data.get("image_url", "[https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200](https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200)")
     layout = slide_data.get("layout", "title_only")
     p = slide_data.get("data", slide_data)
     
@@ -258,7 +264,7 @@ def build_luminal_slide(slide_data, total_index):
             m_html += f"""
             <div class="glass-card text-center animate-up delay-{i+2}">
                 <div class="w-32 h-32 rounded-full mx-auto mb-8 border-4 border-brand/30 overflow-hidden">
-                    <img src="{m.get("avatar", "https://i.pravatar.cc/150")}" alt="av">
+                    <img src="{m.get("avatar", "[https://i.pravatar.cc/150](https://i.pravatar.cc/150)")}" alt="av">
                 </div>
                 <h4 class="text-2xl font-bold">{m.get("name", "Nome")}</h4>
                 <p class="text-brand/80">{m.get("role", "Cargo")}</p>
@@ -344,7 +350,7 @@ def build_luminal_slide(slide_data, total_index):
             </h2>
             <div class="glass-card inline-block text-left animate-in delay-2">
                 <p class="text-brand font-bold mb-2">{p.get("contact", "@contato")}</p>
-                <p class="text-gray-400">{p.get("website", "www.site.com")}</p>
+                <p class="text-gray-400">{p.get("website", "[www.site.com](https://www.site.com)")}</p>
             </div>
         </div>
         """
@@ -365,8 +371,10 @@ def build_luminal_slide(slide_data, total_index):
     </section>
     """
 
+
 # ==========================================
 # MOTOR DO EDITOR CLÁSSICO HTML (Aba 1)
+# Agora SEM MoviePy: Toca nativo com array JS para evitar cortes
 # ==========================================
 def render_html_player(scenes, tts_config, brand_config):
     audio_srcs = []
@@ -392,7 +400,7 @@ def render_html_player(scenes, tts_config, brand_config):
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
         <script>
             tailwind.config = {{ 
                 theme: {{ 
@@ -402,7 +410,7 @@ def render_html_player(scenes, tts_config, brand_config):
                 }} 
             }}
         </script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+        <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap)" rel="stylesheet">
         <style>
             :root {{ 
                 --primary: {brand_config["color"]}; 
@@ -594,6 +602,7 @@ def render_html_player(scenes, tts_config, brand_config):
     """
     components.html(html_code, height=850, scrolling=False)
 
+
 # ==========================================
 # MOTOR DA SUPER AULA (COMPILADOR HTML/JS MONOLÍTICO)
 # Serve tanto para Aba 1 (Gerada) quanto Aba 2 (Hardcoded)
@@ -712,7 +721,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     <html lang="pt-br">
     <head>
         <meta charset="UTF-8">
-        <script src="https://cdn.tailwindcss.com"></script>
+        <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
         <script>
             tailwind.config = {{ 
                 theme: {{ 
@@ -722,7 +731,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                 }} 
             }}
         </script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap" rel="stylesheet">
+        <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap)" rel="stylesheet">
         <style>
             :root {{ 
                 --primary: {brand_config["color"]}; 
@@ -1141,7 +1150,7 @@ with tab1:
     with col_g1:
         tem_game = st.checkbox("Incluir um Game/Simulador no meio da aula?", value=False)
     with col_g2:
-        game_url = st.text_input("Link do Simulador", "https://game.sabergestao.com.br/embed/...")
+        game_url = st.text_input("Link do Simulador", "[https://game.sabergestao.com.br/embed/](https://game.sabergestao.com.br/embed/)...")
         game_title = st.text_input("Título do Simulador", "Desafio Prático")
 
     if st.button("🧠 1. Gerar Super Aula Completa", use_container_width=True):
@@ -1226,7 +1235,7 @@ with tab2:
             "scenes": [
                 {
                     "layout": "hero", 
-                    "image_url": "https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200](https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200)", 
                     "kicker": "NR 33: Segurança em Espaço Confinado", 
                     "title": "A PET", 
                     "highlight": "PERMISSÃO DE TRABALHO", 
@@ -1235,7 +1244,7 @@ with tab2:
                 },
                 {
                     "layout": "quote", 
-                    "image_url": "https://images.unsplash.com/photo-1513128034602-7814ccaddd4e?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1513128034602-7814ccaddd4e?q=80&w=1200](https://images.unsplash.com/photo-1513128034602-7814ccaddd4e?q=80&w=1200)", 
                     "quote_text": "É proibida a entrada e o trabalho em espaços confinados sem a emissão da PET.", 
                     "author": "Texto da Norma", 
                     "role": "NR 33.3.3.1", 
@@ -1243,7 +1252,7 @@ with tab2:
                 },
                 {
                     "layout": "philosophy", 
-                    "image_url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=1200](https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=1200)", 
                     "title": "Um Processo Vivo", 
                     "paragraphs": [
                         "A PET encerra-se ao final de cada turno de trabalho.", 
@@ -1253,7 +1262,7 @@ with tab2:
                 },
                 {
                     "layout": "compare", 
-                    "image_url": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1200](https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1200)", 
                     "bad_title": "Entrada Informal", 
                     "bad_items": [
                         "Risco de asfixia imediato", 
@@ -1270,7 +1279,7 @@ with tab2:
                 },
                 {
                     "layout": "title_only", 
-                    "image_url": "https://images.unsplash.com/photo-1516937941344-00b4e0337589?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1516937941344-00b4e0337589?q=80&w=1200](https://images.unsplash.com/photo-1516937941344-00b4e0337589?q=80&w=1200)", 
                     "title": "Quem são os responsáveis por esse documento?", 
                     "narration_text": "Não basta preencher. É preciso saber quem tem o poder legal e a responsabilidade técnica de autorizar a descida da equipe."
                 }
@@ -1318,8 +1327,8 @@ with tab2:
             "scenes": [
                 {
                     "layout": "side_by_side", 
-                    "image_url": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=1200", 
-                    "side_image": "https://images.unsplash.com/photo-1576086213369-97a306d36557?q=80&w=1000", 
+                    "image_url": "[https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=1200](https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=1200)", 
+                    "side_image": "[https://images.unsplash.com/photo-1576086213369-97a306d36557?q=80&w=1000](https://images.unsplash.com/photo-1576086213369-97a306d36557?q=80&w=1000)", 
                     "title": "Monitoramento", 
                     "subtitle": "A primeira linha de defesa.", 
                     "list_items": [
@@ -1330,7 +1339,7 @@ with tab2:
                 },
                 {
                     "layout": "pillars", 
-                    "image_url": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=1200](https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=1200)", 
                     "items": [
                         {"emoji": "✍️", "title": "Supervisor", "desc": "Emite e encerra a PET."}, 
                         {"emoji": "👁️", "title": "Vigia", "desc": "Monitora do lado de fora."}, 
@@ -1340,7 +1349,7 @@ with tab2:
                 },
                 {
                     "layout": "metrics", 
-                    "image_url": "https://images.unsplash.com/photo-1582139329536-e7284fece509?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1582139329536-e7284fece509?q=80&w=1200](https://images.unsplash.com/photo-1582139329536-e7284fece509?q=80&w=1200)", 
                     "metrics": [
                         { "value": "20.9%", "label": "Oxigênio Ideal", "color": "text-blue-500" },
                         { "value": "0%", "label": "LEL (Explosividade)", "color": "text-orange-500" },
@@ -1351,7 +1360,7 @@ with tab2:
                 },
                 {
                     "layout": "features_grid", 
-                    "image_url": "https://images.unsplash.com/photo-1530124560676-587cabee14f2?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1530124560676-587cabee14f2?q=80&w=1200](https://images.unsplash.com/photo-1530124560676-587cabee14f2?q=80&w=1200)", 
                     "features": [
                         "Exaustores", 
                         "Insufladores", 
@@ -1364,7 +1373,7 @@ with tab2:
                 },
                 {
                     "layout": "timeline", 
-                    "image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200](https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200)", 
                     "title": "Fluxo da PET", 
                     "events": [
                         {"year": "Início", "event": "Avaliação", "desc": "Teste de gases e riscos."},
@@ -1376,18 +1385,18 @@ with tab2:
                 },
                 {
                     "layout": "team", 
-                    "image_url": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1200](https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1200)", 
                     "title": "A Equipe de Resgate", 
                     "members": [
-                        { "name": "Interna", "role": "Brigada Própria", "avatar": "https://i.pravatar.cc/150?u=r1" },
-                        { "name": "Externa", "role": "Corpo de Bombeiros", "avatar": "https://i.pravatar.cc/150?u=r2" },
-                        { "name": "Equipamentos", "role": "Prontos para Uso", "avatar": "https://i.pravatar.cc/150?u=r3" }
+                        { "name": "Interna", "role": "Brigada Própria", "avatar": "[https://i.pravatar.cc/150?u=r1](https://i.pravatar.cc/150?u=r1)" },
+                        { "name": "Externa", "role": "Corpo de Bombeiros", "avatar": "[https://i.pravatar.cc/150?u=r2](https://i.pravatar.cc/150?u=r2)" },
+                        { "name": "Equipamentos", "role": "Prontos para Uso", "avatar": "[https://i.pravatar.cc/150?u=r3](https://i.pravatar.cc/150?u=r3)" }
                     ],
                     "narration_text": "A PET deve conter o plano de resgate. Se algo der errado, ninguém entra para salvar no susto. O resgate deve ser técnico, treinado e equipado."
                 },
                 {
                     "layout": "quote", 
-                    "image_url": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=1200](https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=1200)", 
                     "quote_text": "O Vigia não pode realizar outras tarefas que possam comprometer seu dever principal.", 
                     "author": "Regra de Ouro", 
                     "role": "NR 33.3.4.1", 
@@ -1395,7 +1404,7 @@ with tab2:
                 },
                 {
                     "layout": "title_only", 
-                    "image_url": "https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=1200](https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=1200)", 
                     "title": "Segurança não é custo, é investimento em vida.", 
                     "narration_text": "Agora que você entende o peso técnico da Permissão de Trabalho, está pronto para ser o guardião da vida da sua equipe."
                 }
@@ -1441,7 +1450,7 @@ with tab2:
         {
             "type": "game",
             "title": "🕹️ SIMULADOR: GATE KEEPER",
-            "url": "https://game.sabergestao.com.br/embed/unified/gate-keeper-v1-moslttly"
+            "url": "[https://game.sabergestao.com.br/embed/unified/gate-keeper-v1-moslttly](https://game.sabergestao.com.br/embed/unified/gate-keeper-v1-moslttly)"
         },
 
         # FASE 4: CONCLUSÃO (3 Slides)
@@ -1450,7 +1459,7 @@ with tab2:
             "scenes": [
                 {
                     "layout": "philosophy", 
-                    "image_url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1200](https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1200)", 
                     "title": "Zero Acidentes", 
                     "paragraphs": [
                         "A PET é a ferramenta que formaliza a sua segurança.", 
@@ -1460,7 +1469,7 @@ with tab2:
                 },
                 {
                     "layout": "compare", 
-                    "image_url": "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1200](https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1200)", 
                     "bad_title": "O Atalho", 
                     "bad_items": ["Ganho de 10 minutos", "Risco de morte de 100%"], 
                     "good_title": "O Protocolo", 
@@ -1469,7 +1478,7 @@ with tab2:
                 },
                 {
                     "layout": "ending", 
-                    "image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200", 
+                    "image_url": "[https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200](https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200)", 
                     "title": "Missão", 
                     "highlight": "CUMPRIDA.", 
                     "contact": "Segurança do Trabalho", 
