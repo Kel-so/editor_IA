@@ -88,7 +88,7 @@ def gen_audio_sync(text, filepath, tts_config):
         try:
             from elevenlabs.client import ElevenLabs
             api_key = st.secrets.get("ELEVENLABS_API_KEY", "")
-            voice_id = tts_config.get("voice_id", "JBFqnCBsd6RMkjVDRZzb")
+            voice_id = tts_config.get("voice_id", "kd1lRcSdRGIfyKxQKjmH")
             client = ElevenLabs(api_key=api_key)
             audio_generator = client.text_to_speech.convert(
                 text=clean_text, 
