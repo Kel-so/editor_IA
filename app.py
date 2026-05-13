@@ -1481,3 +1481,4 @@ with tab2:
     ]
     
     if st.button("🔥 Compilar Super Aula NR-33", type="primary"):
+        render_super_aula_html(SUPER_AULA, tc, bc)
