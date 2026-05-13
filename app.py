@@ -897,40 +897,198 @@ with tab2:
     st.markdown("Uma experiência interativa com vídeo, voz e testes de conhecimento 100% contínua.")
     
     SUPER_AULA = [
+        # ==========================================
+        # FASE 1: VÍDEO INTRODUTÓRIO (5 Slides)
+        # ==========================================
         {
             "type": "video",
             "scenes": [
-                {"layout": "hero", "image_url": "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1200", "kicker": "Módulo 1", "title": "REDES", "highlight": "NEURAIS", "subtitle": "A base do aprendizado profundo.", "narration_text": "O cérebro humano é a máquina mais eficiente do universo. Quando decidimos criar inteligência artificial de verdade, paramos de programar regras fixas e começamos a copiar a biologia."},
-                {"layout": "philosophy", "image_url": "https://images.unsplash.com/photo-1507146426996-ef05306b995a?q=80&w=1200", "title": "O Neurônio Digital", "paragraphs": ["Em vez de 'Se A, faça B', criamos nós conectados.", "Eles recebem dados, multiplicam por pesos e disparam respostas."], "narration_text": "A mágica acontece no perceptron, o nosso neurônio digital. Ele pega a informação bruta da imagem ou do texto, joga um peso matemático nela, e decide se a informação deve seguir adiante ou parar ali mesmo."}
+                {
+                    "layout": "hero", 
+                    "image_url": "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1200", 
+                    "kicker": "Módulo 1: Fundamentos", 
+                    "title": "REDES", 
+                    "highlight": "NEURAIS", 
+                    "subtitle": "A base biológica do aprendizado profundo.", 
+                    "narration_text": "O cérebro humano é a máquina mais eficiente do universo. Quando decidimos criar inteligência artificial de verdade, paramos de programar regras fixas e começamos a copiar a biologia."
+                },
+                {
+                    "layout": "quote", 
+                    "image_url": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1200", 
+                    "quote_text": "A Inteligência Artificial é a nova eletricidade.", 
+                    "author": "Andrew Ng", 
+                    "role": "Pioneiro do Deep Learning", 
+                    "narration_text": "Assim como a eletricidade transformou todas as indústrias há cem anos, a inteligência artificial está refazendo a base da nossa civilização neste exato momento."
+                },
+                {
+                    "layout": "philosophy", 
+                    "image_url": "https://images.unsplash.com/photo-1507146426996-ef05306b995a?q=80&w=1200", 
+                    "title": "O Neurônio Digital", 
+                    "paragraphs": ["Em vez de 'Se A, faça B', criamos nós conectados.", "Eles recebem dados, multiplicam por pesos e disparam respostas."], 
+                    "narration_text": "A mágica acontece no perceptron, o nosso neurônio digital. Ele pega a informação bruta, joga um peso matemático nela, e decide se o sinal deve seguir adiante ou parar."
+                },
+                {
+                    "layout": "compare", 
+                    "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1200", 
+                    "bad_title": "Código Clássico", 
+                    "bad_items": ["Regras escritas por humanos", "Inflexível a mudanças", "Limitado à lógica imposta"], 
+                    "good_title": "Machine Learning", 
+                    "good_items": ["Aprende com os dados", "Adapta-se continuamente", "Descobre regras ocultas"], 
+                    "narration_text": "Na programação clássica, nós ditamos as regras passo a passo. No machine learning, a lógica inverte: nós fornecemos os dados e a máquina descobre as regras sozinha."
+                },
+                {
+                    "layout": "title_only", 
+                    "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200", 
+                    "title": "Mas como isso funciona na prática?", 
+                    "narration_text": "Entender o conceito biológico é apenas o primeiro passo. Agora precisamos olhar para dentro da caixa preta e ver a engrenagem matemática girar."
+                }
             ]
         },
+        
+        # ==========================================
+        # QUIZ 1
+        # ==========================================
         {
             "type": "quiz",
-            "question": "Baseado no vídeo, qual é o princípio fundamental de uma rede neural em vez da programação tradicional?",
-            "options": ["Ela usa regras de 'Se A, faça B'.", "Ela usa nós conectados e pesos matemáticos.", "Ela salva dados no disco rígido para consultar depois."],
-            "answer": "Ela usa nós conectados e pesos matemáticos."
+            "question": "Com base na explicação, qual é a principal diferença entre a Programação Clássica e o Machine Learning?",
+            "options": [
+                "O Machine Learning não usa computadores.", 
+                "Na programação clássica humanos escrevem as regras; no ML, a máquina descobre as regras a partir dos dados.", 
+                "A programação clássica é mais rápida e inteligente."
+            ],
+            "answer": "Na programação clássica humanos escrevem as regras; no ML, a máquina descobre as regras a partir dos dados."
         },
+        
+        # ==========================================
+        # FASE 2: O CORE TÉCNICO (Exatos 8 Slides)
+        # ==========================================
         {
             "type": "video",
             "scenes": [
-                {"layout": "pillars", "image_url": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200", "items": [{"emoji": "📥", "title": "Input", "desc": "Recebe os dados brutos."}, {"emoji": "🧠", "title": "Hidden Layers", "desc": "Onde o processamento pesado ocorre."}, {"emoji": "📤", "title": "Output", "desc": "A resposta final da IA."}], "narration_text": "Para uma rede ser profunda, o famoso Deep Learning, ela precisa de camadas ocultas. O dado entra na camada de Input, é mastigado por milhares de neurônios nas Hidden Layers, e cospe o resultado na camada de Output."},
-                {"layout": "quote", "image_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200", "quote_text": "A profundidade da rede define o nível de abstração que ela consegue entender.", "author": "Geoffrey Hinton", "role": "Padrinho da IA", "narration_text": "É nessas camadas ocultas que o computador aprende a diferença entre um cachorro e um gato, construindo padrões visuais complexos que nenhum humano conseguiria codificar manualmente."}
+                {
+                    "layout": "side_by_side", 
+                    "image_url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1200", 
+                    "side_image": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1000", 
+                    "title": "A Anatomia", 
+                    "subtitle": "Pesos e Viéses em ação.", 
+                    "list_items": ["Soma Ponderada", "Função de Ativação (ReLU)"], 
+                    "narration_text": "Tudo começa com a anatomia. Um neurônio digital recebe várias entradas, aplica pesos matemáticos de importância a cada uma delas, soma tudo e passa por um filtro de ativação."
+                },
+                {
+                    "layout": "pillars", 
+                    "image_url": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200", 
+                    "items": [
+                        {"emoji": "📥", "title": "Input Layer", "desc": "Entrada dos dados brutos."}, 
+                        {"emoji": "🧠", "title": "Hidden Layers", "desc": "Extração de padrões profundos."}, 
+                        {"emoji": "📤", "title": "Output Layer", "desc": "Previsão final da IA."}
+                    ], 
+                    "narration_text": "Esses neurônios são organizados em camadas. A camada de entrada recebe a foto. As camadas ocultas processam os pixels e padrões. A camada de saída entrega a decisão final."
+                },
+                {
+                    "layout": "metrics", 
+                    "image_url": "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1200", 
+                    "metrics": [
+                        { "value": "175B", "label": "Parâmetros", "color": "text-blue-500" },
+                        { "value": "Terabytes", "label": "De Dados Lidos", "color": "text-purple-500" },
+                        { "value": "ms", "label": "Tempo de Resposta", "color": "text-emerald-500" },
+                        { "value": "Agi", "label": "O Grande Objetivo", "color": "text-orange-500" }
+                    ],
+                    "narration_text": "O que choca hoje é a escala absurda. Estamos falando de modelos massivos com centenas de bilhões de parâmetros, treinados em bibliotecas gigantescas, respondendo num piscar de olhos."
+                },
+                {
+                    "layout": "features_grid", 
+                    "image_url": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?q=80&w=1200", 
+                    "features": ["Visão Computacional", "Chatbots NLP", "Robótica Avançada", "Medicina Preditiva", "Carros Autônomos", "Arte Generativa"],
+                    "narration_text": "Essa mesma arquitetura não serve apenas para bater papo. Ela enxerga tumores em exames, dirige carros nas rodovias e até cria obras de arte complexas do zero."
+                },
+                {
+                    "layout": "timeline", 
+                    "image_url": "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1200", 
+                    "title": "A Escalada", 
+                    "events": [
+                        {"year": "1950", "event": "Teste de Turing", "desc": "A fundação teórica da IA."},
+                        {"year": "1997", "event": "Deep Blue", "desc": "Máquina vence Kasparov no xadrez."},
+                        {"year": "2012", "event": "AlexNet", "desc": "A revolução do reconhecimento de imagem."},
+                        {"year": "Hoje", "event": "Era Generativa", "desc": "LLMs dominam a produção global."}
+                    ],
+                    "narration_text": "A subida foi longa. Das teorias de Alan Turing nos anos cinquenta, passando pelos invernos da IA, até a explosão do Deep Learning em 2012 que nos trouxe à Era Generativa de hoje."
+                },
+                {
+                    "layout": "team", 
+                    "image_url": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200", 
+                    "title": "Os Padrinhos da IA", 
+                    "members": [
+                        { "name": "Geoffrey Hinton", "role": "Pesquisador", "avatar": "https://i.pravatar.cc/150?u=hinton" },
+                        { "name": "Yann LeCun", "role": "Cientista Chefe", "avatar": "https://i.pravatar.cc/150?u=lecun" },
+                        { "name": "Yoshua Bengio", "role": "Matemático", "avatar": "https://i.pravatar.cc/150?u=bengio" }
+                    ],
+                    "narration_text": "Essa revolução existe graças a pesquisadores obstinados. Nomes que continuaram apostando nas redes neurais profundas mesmo quando toda a indústria de tecnologia achava que era um beco sem saída."
+                },
+                {
+                    "layout": "quote", 
+                    "image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200", 
+                    "quote_text": "A profundidade da rede é o que define o nível de abstração e inteligência.", 
+                    "author": "Yoshua Bengio", 
+                    "role": "Vencedor do Prêmio Turing", 
+                    "narration_text": "A resposta estava na complexidade estrutural. Quanto mais camadas ocultas adicionamos ao bolo, maior a capacidade do modelo de entender contextos altamente abstratos."
+                },
+                {
+                    "layout": "title_only", 
+                    "image_url": "https://images.unsplash.com/photo-1635070041078-e363dbe005cb?q=80&w=1200", 
+                    "title": "O limite agora é apenas computacional.", 
+                    "narration_text": "O software e o algoritmo já provaram seu valor. Hoje, a verdadeira guerra no vale do silício é por placas de vídeo e energia para suportar o apetite dos servidores."
+                }
             ]
         },
+        
+        # ==========================================
+        # QUIZ 2
+        # ==========================================
         {
             "type": "quiz",
-            "question": "Onde ocorre o 'processamento pesado' onde a IA realmente encontra os padrões complexos?",
-            "options": ["Na camada de Input (Entrada).", "Na camada de Output (Saída).", "Nas Hidden Layers (Camadas Ocultas)."],
-            "answer": "Nas Hidden Layers (Camadas Ocultas)."
+            "question": "Qual é a estrutura responsável por extrair e processar os padrões profundos de uma Rede Neural?",
+            "options": [
+                "A fonte de alimentação (GPU).", 
+                "A Camada Oculta (Hidden Layers).", 
+                "O código fonte do sistema operacional."
+            ],
+            "answer": "A Camada Oculta (Hidden Layers)."
         },
+
+        # ==========================================
+        # FASE 3: FECHAMENTO (3 Slides)
+        # ==========================================
         {
             "type": "video",
             "scenes": [
-                {"layout": "ending", "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200", "title": "Módulo", "highlight": "Concluído.", "contact": "Você dominou a base.", "website": "Prepare-se para o nível 2.", "narration_text": "Chegamos ao fim da fundação. Você entende agora que não se trata de código escrito, mas de arquitetura de aprendizado. Você está pronto para construir os modelos do amanhã."}
+                {
+                    "layout": "philosophy", 
+                    "image_url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1200", 
+                    "title": "A Questão Ética", 
+                    "paragraphs": ["A IA reflete e amplifica os dados com os quais é alimentada.", "O poder de prever traz a responsabilidade imensa de auditar viéses."], 
+                    "narration_text": "Com grande poder, vem uma responsabilidade ainda maior. A inteligência artificial não tem moral intrínseca. Ela apenas reflete, de forma fria, os acertos e os preconceitos humanos embutidos nos dados."
+                },
+                {
+                    "layout": "compare", 
+                    "image_url": "https://images.unsplash.com/photo-1531482615713-2afd69097998?q=80&w=1200", 
+                    "bad_title": "O Fator Humano", 
+                    "bad_items": ["Intuição", "Criatividade", "Visão Estratégica"], 
+                    "good_title": "A Máquina", 
+                    "good_items": ["Velocidade Bruta", "Reconhecimento de Padrões", "Escala Infinita"], 
+                    "narration_text": "O futuro não é homem contra a máquina, mas sim homem elevado pela máquina. A combinação da intuição humana com a velocidade bruta do algoritmo criará a força de trabalho definitiva."
+                },
+                {
+                    "layout": "ending", 
+                    "image_url": "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=1200", 
+                    "title": "Você dominou o", 
+                    "highlight": "Core System.", 
+                    "contact": "contato@luminal.ai", 
+                    "website": "www.luminal.ai", 
+                    "narration_text": "Você acabou de dominar os fundamentos absolutos das redes neurais. O futuro já está sendo escrito em pesos e viéses. A única pergunta é: o que você vai construir agora?"
+                }
             ]
         }
     ]
-
     st.info("💡 A aula foi pré-configurada. Clique abaixo para compilar a experiência (Pode levar de 15 a 30 segundos).")
     
     if st.button("🔥 Compilar e Iniciar Super Aula Interativa", type="primary", use_container_width=True):
