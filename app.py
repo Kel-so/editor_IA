@@ -104,7 +104,7 @@ def generate_course_with_gemini(tema_texto, tem_game=False, game_url="", game_ti
     LEMBRE-SE: Retorne APENAS um Array em formato JSON. Sem marcações Markdown (```json). Certifique-se que cada image_url tem as keywords exatas daquela cena.
     """
     try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
         response = model.generate_content(
             prompt, 
             generation_config=genai.GenerationConfig(response_mime_type="application/json")
@@ -141,7 +141,7 @@ def gen_audio_sync(text, filepath, tts_config):
             audio_generator = client.text_to_speech.convert(
                 text=clean_text, 
                 voice_id=voice_id, 
-                model_id="eleven_turbo_v2_5", 
+                model_id="eleven_mulrilingual_v2", 
                 output_format="mp3_44100_128"
             )
             with open(filepath, "wb") as f:
