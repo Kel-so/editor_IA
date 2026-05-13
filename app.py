@@ -635,29 +635,47 @@ def render_super_aula_html(course_data, tts_config, brand_config):
 
         elif block["type"] == "quiz":
             qs = []
+            
+            # As 5 opções de inícios para acerto e para erro
+            intros_suc = ["Exatamente!", "Na mosca!", "Perfeito!", "Cirúrgico.", "Mandou muito bem!"]
+            intros_err = [
+                "Ops, não é bem por aí.", 
+                "Escorregou feio nessa.", 
+                "Não foi dessa vez.", 
+                "Quase, mas a lógica falhou.", 
+                "Incorreto. A memória te traiu."
+            ]
+            
             for q_idx, q in enumerate(block["questions"]):
-                # Agora o Feedback de Sucesso é específico com a explicação
-                exp_text = q.get("explanation", "Essa é a lógica correta.")
+                # Gera o áudio de sucesso com explicação completa
+                exp_correct = q.get("explanation_correct", "Essa é a lógica correta.")
+                intro_s = np.random.choice(intros_suc)
+                suc_text = f"{intro_s} {exp_correct}"
                 
-                suc_text = f"Exato! {exp_text}"
                 p_suc = f"temp_files/sa_q_{idx}_{q_idx}_s.mp3"
                 gen_audio_sync(suc_text, p_suc, tts_config)
                 with open(p_suc, "rb") as f:
                     suc_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
 
-                # E o Feedback de Erro ensina o porquê de estar errado
-                err_text = f"Ops, não é bem por aí. Lembre-se: {exp_text}"
-                p_err = f"temp_files/sa_q_{idx}_{q_idx}_e.mp3"
-                gen_audio_sync(err_text, p_err, tts_config)
-                with open(p_err, "rb") as f:
-                    err_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+                # Gera os áudios de erro (1 para cada dica na lista de 'hints')
+                err_b64_list = []
+                hints = q.get("hints", ["Revise o conceito e tente novamente."])
+                
+                for h_idx, hint in enumerate(hints):
+                    intro_e = np.random.choice(intros_err)
+                    err_text = f"{intro_e} Uma dica: {hint}"
+                    
+                    p_err = f"temp_files/sa_q_{idx}_{q_idx}_e_{h_idx}.mp3"
+                    gen_audio_sync(err_text, p_err, tts_config)
+                    with open(p_err, "rb") as f:
+                        err_b64_list.append("data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8'))
 
                 qs.append({
                     "question": q["question"], 
                     "options": q["options"], 
                     "answer_idx": q["options"].index(q["answer"]),
                     "audio_success": suc_b64,
-                    "audio_error": err_b64
+                    "audio_errors": err_b64_list
                 })
                 
             js_course_data.append({
@@ -1002,7 +1020,11 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                         }} else {{
                             btn.classList.add('btn-shake'); 
                             ind.innerText = "❌";
-                            playAudioFadeIn(q.audio_error); 
+                            
+                            // Toca uma das dicas de erro geradas especificamente para essa pergunta
+                            const randomErr = q.audio_errors[Math.floor(Math.random() * q.audio_errors.length)];
+                            playAudioFadeIn(randomErr); 
+                            
                             aud.onended = () => {{ 
                                 aud.onended = null; 
                                 document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = false); 
@@ -1117,7 +1139,7 @@ with tab1:
 
 with tab2:
     st.title("🎓 Super Aula: PET NR-33 (A Experiência Completa)")
-    # ROTEIRO COMPLEXO NR-33 COM EXPLICAÇÕES NO QUIZ
+    # ROTEIRO COMPLEXO NR-33 COM EXPLICAÇÕES E DICAS NO QUIZ
     SUPER_AULA = [
         # FASE 1: O QUE É A PET (5 Slides)
         {
@@ -1176,7 +1198,7 @@ with tab2:
             ]
         },
         
-        # QUIZ 1: FUNDAMENTOS COM EXPLICAÇÕES
+        # QUIZ 1: FUNDAMENTOS COM EXPLICAÇÕES E DICAS
         {
             "type": "quiz",
             "questions": [
@@ -1188,7 +1210,11 @@ with tab2:
                         "Sim, ela vale por até 30 dias após a assinatura."
                     ],
                     "answer": "Não, ela é válida apenas para cada entrada e deve ser encerrada ao final do turno.",
-                    "explanation": "A validade da PET é estritamente atrelada ao turno de trabalho, para garantir que as condições seguras não tenham mudado de uma hora pra outra."
+                    "explanation_correct": "A validade da PET é estritamente atrelada ao turno de trabalho, para garantir que as condições seguras não tenham mudado de uma hora pra outra.",
+                    "hints": [
+                        "Lembre-se que o ambiente de um espaço confinado é dinâmico. O que é seguro de manhã, pode ser fatal à tarde.",
+                        "Pense no ciclo exato de um trabalhador. Se o turno dele encerrou e a equipe foi embora, o documento perde a validade."
+                    ]
                 },
                 {
                     "question": "O que acontece se houver uma interrupção nas condições de trabalho ou saída dos trabalhadores?",
@@ -1198,7 +1224,11 @@ with tab2:
                         "Basta o vigia dar um 'visto' no verso do documento atual."
                     ],
                     "answer": "A PET deve ser cancelada e uma nova permissão deve ser emitida para o retorno.",
-                    "explanation": "Qualquer saída da equipe exige que o ambiente seja testado e liberado do zero, gerando sempre um novo documento oficial."
+                    "explanation_correct": "Qualquer saída da equipe exige que o ambiente seja testado e liberado do zero, gerando sempre um novo documento oficial.",
+                    "hints": [
+                        "A segurança não tira intervalo. Se o ambiente ficou vazio, quem garante que continua seguro para retornar?",
+                        "O 'visto' informal não tem validade legal para reentrada se a operação parou por algum tempo."
+                    ]
                 }
             ]
         },
@@ -1293,7 +1323,7 @@ with tab2:
             ]
         },
         
-        # QUIZ 2: OPERACIONAL COM EXPLICAÇÕES
+        # QUIZ 2: OPERACIONAL COM EXPLICAÇÕES E DICAS
         {
             "type": "quiz",
             "questions": [
@@ -1305,7 +1335,11 @@ with tab2:
                         "Operar máquinas pesadas fora do espaço confinado."
                     ],
                     "answer": "Manter contagem contínua dos trabalhadores e acionar o resgate se necessário.",
-                    "explanation": "O vigia é o anjo da guarda que fica na parte de fora. Ele nunca pode abandonar o posto ou assumir outras tarefas operacionais que tirem a atenção dele."
+                    "explanation_correct": "O vigia é o anjo da guarda que fica na parte de fora. Ele nunca pode abandonar o posto ou assumir outras tarefas operacionais que tirem a atenção dele.",
+                    "hints": [
+                        "O vigia precisa ter os olhos cravados no acesso. Se ele for operar uma máquina, quem olha para os trabalhadores?",
+                        "Entrar no espaço para resgatar sem ser da equipe de resgate, é o que causa a maioria das mortes duplas no Brasil."
+                    ]
                 },
                 {
                     "question": "Por quanto tempo a empresa deve manter arquivada a PET após o encerramento do trabalho?",
@@ -1315,7 +1349,11 @@ with tab2:
                         "5 anos."
                     ],
                     "answer": "5 anos.",
-                    "explanation": "A norma exige a guarda física ou digital da permissão por exatos cinco anos para garantir total rastreabilidade e amparo legal da sua operação."
+                    "explanation_correct": "A norma exige a guarda física ou digital da permissão por exatos cinco anos para garantir total rastreabilidade e amparo legal da sua operação.",
+                    "hints": [
+                        "Processos trabalhistas e auditorias podem acontecer muito tempo depois da obra terminar. Pense em um prazo mais longo.",
+                        "A lei não pede apenas meses nem um aninho só. Pense no tempo médio que a maioria dos documentos fiscais e legais exige."
+                    ]
                 }
             ]
         },
