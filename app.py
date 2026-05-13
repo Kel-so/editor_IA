@@ -1218,50 +1218,266 @@ with tab1:
 
 with tab2:
     st.title("🎓 Super Aula Hardcoded: PET NR-33")
+    
     SUPER_AULA = [
+        # FASE 1: O QUE É A PET (5 Slides)
         {
             "type": "video",
             "scenes": [
                 {
-                    "layout": "hero", "image_url": "[https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200](https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200)", 
-                    "kicker": "NR 33: Segurança em Espaço Confinado", "title": "A PET", "highlight": "PERMISSÃO DE TRABALHO", 
+                    "layout": "hero", 
+                    "image_url": "https://images.unsplash.com/photo-1544465544-1b71aee9dfa3?q=80&w=1200", 
+                    "kicker": "NR 33: Segurança em Espaço Confinado", 
+                    "title": "A PET", 
+                    "highlight": "PERMISSÃO DE TRABALHO", 
                     "subtitle": "O documento que separa a vida do acidente fatal.", 
-                    "narration_text": "Em espaços confinados, o perigo é invisível. A PET não é apenas um papel, mas um protocolo rigoroso de sobrevivência."
+                    "narration_text": "Em espaços confinados, o perigo é invisível. A PET, ou Permissão de Entrada e Trabalho, não é apenas um papel, mas um protocolo rigoroso de sobrevivência."
                 },
                 {
-                    "layout": "philosophy", "image_url": "[https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=1200](https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=1200)", 
-                    "title": "Um Processo Vivo", "paragraphs": ["A PET encerra-se ao final de cada turno de trabalho.", "Qualquer saída requer uma nova validação."], 
-                    "narration_text": "Entenda que a PET tem validade curta. Se o turno acabou ou a equipe saiu, o processo recomeça do zero."
+                    "layout": "quote", 
+                    "image_url": "https://images.unsplash.com/photo-1513128034602-7814ccaddd4e?q=80&w=1200", 
+                    "quote_text": "É proibida a entrada e o trabalho em espaços confinados sem a emissão da PET.", 
+                    "author": "Texto da Norma", 
+                    "role": "NR 33.3.3.1", 
+                    "narration_text": "A norma é clara: ninguém entra, ninguém desce e ninguém opera sem uma PET emitida, datada e assinada por quem entende do risco."
+                },
+                {
+                    "layout": "philosophy", 
+                    "image_url": "https://images.unsplash.com/photo-1581094288338-2314dddb7ecc?q=80&w=1200", 
+                    "title": "Um Processo Vivo", 
+                    "paragraphs": [
+                        "A PET encerra-se ao final de cada turno de trabalho.", 
+                        "Qualquer interrupção ou saída requer uma nova validação."
+                    ], 
+                    "narration_text": "Entenda que a PET tem validade curta. Ela é específica para aquela atividade e aquele momento. Se o turno acabou ou a equipe saiu, o processo recomeça do zero."
+                },
+                {
+                    "layout": "compare", 
+                    "image_url": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1200", 
+                    "bad_title": "Entrada Informal", 
+                    "bad_items": [
+                        "Risco de asfixia imediato", 
+                        "Falta de vigia externo", 
+                        "Sem plano de resgate"
+                    ], 
+                    "good_title": "Entrada com PET", 
+                    "good_items": [
+                        "Monitoramento de gases", 
+                        "Vigia posicionado", 
+                        "Equipamentos aferidos"
+                    ], 
+                    "narration_text": "Trabalhar no achismo em um tanque ou silo é uma sentença de morte. Com a PET, transformamos o ambiente hostil em um cenário controlado e monitorado."
+                },
+                {
+                    "layout": "title_only", 
+                    "image_url": "https://images.unsplash.com/photo-1516937941344-00b4e0337589?q=80&w=1200", 
+                    "title": "Quem são os responsáveis por esse documento?", 
+                    "narration_text": "Não basta preencher. É preciso saber quem tem o poder legal e a responsabilidade técnica de autorizar a descida da equipe."
                 }
             ]
         },
+        
+        # QUIZ 1: FUNDAMENTOS COM EXPLICAÇÕES E DICAS
         {
             "type": "quiz",
             "questions": [
                 {
-                    "question": "A PET pode ser utilizada para vários turnos de trabalho diferentes?",
-                    "options": ["Sim, desde que o trabalho seja o mesmo.", "Não, ela deve ser encerrada ao final do turno."],
-                    "answer": "Não, ela deve ser encerrada ao final do turno.",
-                    "explanation_correct": "A validade da PET é estritamente atrelada ao turno, garantindo que as condições não mudaram.",
-                    "hints": ["O ambiente de um espaço confinado é dinâmico."]
+                    "question": "A PET (Permissão de Entrada e Trabalho) pode ser utilizada para vários turnos de trabalho diferentes?",
+                    "options": [
+                        "Sim, desde que o trabalho seja o mesmo.", 
+                        "Não, ela é válida apenas para cada entrada e deve ser encerrada ao final do turno.", 
+                        "Sim, ela vale por até 30 dias após a assinatura."
+                    ],
+                    "answer": "Não, ela é válida apenas para cada entrada e deve ser encerrada ao final do turno.",
+                    "explanation_correct": "A validade da PET é estritamente atrelada ao turno de trabalho, para garantir que as condições seguras não tenham mudado de uma hora pra outra.",
+                    "hints": [
+                        "Lembre-se que o ambiente de um espaço confinado é dinâmico. O que é seguro de manhã, pode ser fatal à tarde.",
+                        "Pense no ciclo exato de um trabalhador. Se o turno dele encerrou e a equipe foi embora, o documento perde a validade."
+                    ]
+                },
+                {
+                    "question": "O que acontece se houver uma interrupção nas condições de trabalho ou saída dos trabalhadores?",
+                    "options": [
+                        "Eles podem voltar quando quiserem usando a mesma PET.",
+                        "A PET deve ser cancelada e uma nova permissão deve ser emitida para o retorno.",
+                        "Basta o vigia dar um 'visto' no verso do documento atual."
+                    ],
+                    "answer": "A PET deve ser cancelada e uma nova permissão deve ser emitida para o retorno.",
+                    "explanation_correct": "Qualquer saída da equipe exige que o ambiente seja testado e liberado do zero, gerando sempre um novo documento oficial.",
+                    "hints": [
+                        "A segurança não tira intervalo. Se o ambiente ficou vazio, quem garante que continua seguro para retornar?",
+                        "O 'visto' informal não tem validade legal para reentrada se a operação parou por algum tempo."
+                    ]
                 }
             ]
         },
-        {
-            "type": "game",
-            "title": "🕹️ SIMULADOR: GATE KEEPER",
-            "url": "[https://game.sabergestao.com.br/embed/unified/gate-keeper-v1-moslttly](https://game.sabergestao.com.br/embed/unified/gate-keeper-v1-moslttly)"
-        },
+        
+        # FASE 2: O CORE TÉCNICO (8 Slides)
         {
             "type": "video",
             "scenes": [
                 {
-                    "layout": "ending", "image_url": "[https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200](https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200)", 
-                    "title": "Missão", "highlight": "CUMPRIDA.", "contact": "Segurança do Trabalho", "website": "Treinamento Concluído", 
-                    "narration_text": "Você concluiu o treinamento sobre PET da NR 33. Proteja-se e proteja seus colegas. Até a próxima."
+                    "layout": "side_by_side", 
+                    "image_url": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?q=80&w=1200", 
+                    "side_image": "https://images.unsplash.com/photo-1576086213369-97a306d36557?q=80&w=1000", 
+                    "title": "Monitoramento", 
+                    "subtitle": "A primeira linha de defesa.", 
+                    "list_items": [
+                        "Níveis de Oxigênio", 
+                        "Gases Inflamáveis e Tóxicos"
+                    ], 
+                    "narration_text": "O passo técnico mais importante da PET é a avaliação atmosférica. Antes de entrar, testamos o ar. Se os níveis de oxigênio ou gases tóxicos estiverem fora do padrão, ninguém desce."
+                },
+                {
+                    "layout": "pillars", 
+                    "image_url": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=1200", 
+                    "items": [
+                        {"emoji": "✍️", "title": "Supervisor", "desc": "Emite e encerra a PET."}, 
+                        {"emoji": "👁️", "title": "Vigia", "desc": "Monitora do lado de fora."}, 
+                        {"emoji": "👷", "title": "Trabalhador", "desc": "Executa a tarefa interna."}
+                    ], 
+                    "narration_text": "A PET define três papéis vitais. O Supervisor que assina, o Trabalhador que entra e, o mais importante: o Vigia, que nunca abandona seu posto do lado de fora."
+                },
+                {
+                    "layout": "metrics", 
+                    "image_url": "https://images.unsplash.com/photo-1582139329536-e7284fece509?q=80&w=1200", 
+                    "metrics": [
+                        { "value": "20.9%", "label": "Oxigênio Ideal", "color": "text-blue-500" },
+                        { "value": "0%", "label": "LEL (Explosividade)", "color": "text-orange-500" },
+                        { "value": "100%", "label": "Ventilação Ativa", "color": "text-emerald-500" },
+                        { "value": "1", "label": "Vigia por Acesso", "color": "text-brand" }
+                    ],
+                    "narration_text": "Estes são os números da vida. Qualquer variação nesses indicadores exige a evacuação imediata do espaço confinado e a suspensão da permissão de trabalho."
+                },
+                {
+                    "layout": "features_grid", 
+                    "image_url": "https://images.unsplash.com/photo-1530124560676-587cabee14f2?q=80&w=1200", 
+                    "features": [
+                        "Exaustores", 
+                        "Insufladores", 
+                        "Rádios Intrinsecamente Seguros", 
+                        "Tripés de Resgate", 
+                        "Lanternas à prova de explosão", 
+                        "Detectores Multigases"
+                    ],
+                    "narration_text": "A PET lista os equipamentos obrigatórios. Tudo o que entra no espaço deve ser intrinsecamente seguro para não gerar faíscas em atmosferas explosivas."
+                },
+                {
+                    "layout": "timeline", 
+                    "image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200", 
+                    "title": "Fluxo da PET", 
+                    "events": [
+                        {"year": "Início", "event": "Avaliação", "desc": "Teste de gases e riscos."},
+                        {"year": "Emissão", "event": "Assinatura", "desc": "Supervisor libera o acesso."},
+                        {"year": "Trabalho", "event": "Vigilância", "desc": "Monitoramento contínuo."},
+                        {"year": "Fim", "event": "Arquivamento", "desc": "PET guardada por 5 anos."}
+                    ],
+                    "narration_text": "O ciclo de vida da PET começa na avaliação, passa pela vigilância constante e termina no RH. Sim, toda PET deve ser arquivada por cinco anos para rastreabilidade legal."
+                },
+                {
+                    "layout": "team", 
+                    "image_url": "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=1200", 
+                    "title": "A Equipe de Resgate", 
+                    "members": [
+                        { "name": "Interna", "role": "Brigada Própria", "avatar": "https://i.pravatar.cc/150?u=r1" },
+                        { "name": "Externa", "role": "Corpo de Bombeiros", "avatar": "https://i.pravatar.cc/150?u=r2" },
+                        { "name": "Equipamentos", "role": "Prontos para Uso", "avatar": "https://i.pravatar.cc/150?u=r3" }
+                    ],
+                    "narration_text": "A PET deve conter o plano de resgate. Se algo der errado, ninguém entra para salvar no susto. O resgate deve ser técnico, treinado e equipado."
+                },
+                {
+                    "layout": "quote", 
+                    "image_url": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?q=80&w=1200", 
+                    "quote_text": "O Vigia não pode realizar outras tarefas que possam comprometer seu dever principal.", 
+                    "author": "Regra de Ouro", 
+                    "role": "NR 33.3.4.1", 
+                    "narration_text": "Muitos acidentes ocorrem porque o vigia tentou ajudar em outra tarefa ou saiu para buscar uma ferramenta. Sua única função é vigiar e acionar o resgate."
+                },
+                {
+                    "layout": "title_only", 
+                    "image_url": "https://images.unsplash.com/photo-1541888946425-d81bb19480c5?q=80&w=1200", 
+                    "title": "Segurança não é custo, é investimento em vida.", 
+                    "narration_text": "Agora que você entende o peso técnico da Permissão de Trabalho, está pronto para ser o guardião da vida da sua equipe."
+                }
+            ]
+        },
+        
+        # QUIZ 2: OPERACIONAL COM EXPLICAÇÕES E DICAS
+        {
+            "type": "quiz",
+            "questions": [
+                {
+                    "question": "Qual das alternativas abaixo é uma função EXCLUSIVA do Vigia durante o trabalho?",
+                    "options": [
+                        "Entrar no espaço para ajudar o colega em dificuldades.", 
+                        "Manter contagem contínua dos trabalhadores e acionar o resgate se necessário.", 
+                        "Operar máquinas pesadas fora do espaço confinado."
+                    ],
+                    "answer": "Manter contagem contínua dos trabalhadores e acionar o resgate se necessário.",
+                    "explanation_correct": "O vigia é o anjo da guarda que fica na parte de fora. Ele nunca pode abandonar o posto ou assumir outras tarefas operacionais que tirem a atenção dele.",
+                    "hints": [
+                        "O vigia precisa ter os olhos cravados no acesso. Se ele for operar uma máquina, quem olha para os trabalhadores?",
+                        "Entrar no espaço para resgatar sem ser da equipe de resgate, é o que causa a maioria das mortes duplas no Brasil."
+                    ]
+                },
+                {
+                    "question": "Por quanto tempo a empresa deve manter arquivada a PET após o encerramento do trabalho?",
+                    "options": [
+                        "6 meses.",
+                        "1 ano.",
+                        "5 anos."
+                    ],
+                    "answer": "5 anos.",
+                    "explanation_correct": "A norma exige a guarda física ou digital da permissão por exatos cinco anos para garantir total rastreabilidade e amparo legal da sua operação.",
+                    "hints": [
+                        "Processos trabalhistas e auditorias podem acontecer muito tempo depois da obra terminar. Pense em um prazo mais longo.",
+                        "A lei não pede apenas meses nem um aninho só. Pense no tempo médio que a maioria dos documentos fiscais e legais exige."
+                    ]
+                }
+            ]
+        },
+
+        # FASE 3: O GAME (Desafio Gate Keeper)
+        {
+            "type": "game",
+            "title": "🕹️ SIMULADOR: GATE KEEPER",
+            "url": "https://game.sabergestao.com.br/embed/unified/gate-keeper-v1-moslttly"
+        },
+
+        # FASE 4: CONCLUSÃO (3 Slides)
+        {
+            "type": "video",
+            "scenes": [
+                {
+                    "layout": "philosophy", 
+                    "image_url": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1200", 
+                    "title": "Zero Acidentes", 
+                    "paragraphs": [
+                        "A PET é a ferramenta que formaliza a sua segurança.", 
+                        "Nenhum trabalho é tão urgente que não possa ser feito com proteção."
+                    ], 
+                    "narration_text": "Nosso objetivo é um só: que cada colaborador que desça em um espaço confinado, suba de volta para sua família ao final do dia."
+                },
+                {
+                    "layout": "compare", 
+                    "image_url": "https://images.unsplash.com/photo-1506784365847-bbad939e9335?q=80&w=1200", 
+                    "bad_title": "O Atalho", 
+                    "bad_items": ["Ganho de 10 minutos", "Risco de morte de 100%"], 
+                    "good_title": "O Protocolo", 
+                    "good_items": ["Trabalho Profissional", "Segurança Garantida"], 
+                    "narration_text": "Não aceite atalhos. O tempo que você gasta preenchendo a PET e testando os gases é o tempo que garante que você terá um amanhã."
+                },
+                {
+                    "layout": "ending", 
+                    "image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?q=80&w=1200", 
+                    "title": "Missão", 
+                    "highlight": "CUMPRIDA.", 
+                    "contact": "Segurança do Trabalho", 
+                    "website": "Treinamento Concluído", 
+                    "narration_text": "Você concluiu o treinamento sobre PET da NR 33. Leve esse conhecimento para o campo. Proteja-se e proteja seus colegas. Até a próxima."
                 }
             ]
         }
     ]
-    if st.button("🔥 Compilar NR-33", type="primary"):
-        render_super_aula_html(SUPER_AULA, tc, bc)
+    
+    if st.button("🔥 Compilar Super Aula NR-33", type="primary"):
