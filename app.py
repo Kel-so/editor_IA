@@ -77,8 +77,10 @@ def generate_script_with_gemini(tema_texto):
 def gen_audio_sync(text, filepath, tts_config):
     provider = tts_config.get("provider", "Edge-TTS")
     
-    # Removido o buffer com pontinhos (" . . .") que causava o som bizarro no final
-    clean_text = text 
+    # Tratamento contra o "corte seco" no final do áudio
+    clean_text = text.strip()
+    if clean_text and not clean_text[-1] in ['.', '!', '?']:
+        clean_text += "."
     
     if "ElevenLabs" in provider:
         try:
@@ -89,7 +91,7 @@ def gen_audio_sync(text, filepath, tts_config):
             audio_generator = client.text_to_speech.convert(
                 text=clean_text, 
                 voice_id=voice_id, 
-                model_id="eleven_multilingual_v2", 
+                model_id="eleven_turbo_v2_5", 
                 output_format="mp3_44100_128"
             )
             with open(filepath, "wb") as f:
@@ -586,46 +588,6 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     silence_array = np.zeros((44100, 2))
     silence_clip = AudioArrayClip(silence_array, fps=44100)
 
-    # 1. Gerar 10 feedbacks de sucesso LONGOS e IMERSIVOS (Ajustados ao pedido)
-    success_b64s = []
-    sucessos = [
-        "Exatamente! Você pegou a visão perfeitamente.",
-        "Na mosca! A sua lógica está corretíssima.",
-        "Perfeito! O seu cérebro já está fazendo as conexões certas.",
-        "Cirúrgico. Resposta exata, vamos em frente.",
-        "Mandou muito bem! É assim que se constrói o conhecimento.",
-        "Exato! Você definitivamente não está de brincadeira hoje.",
-        "Aí sim! Resposta de quem prestou atenção em cada detalhe.",
-        "Sensacional. Gabarito puro, continue nesse ritmo.",
-        "Certíssimo! Estamos exatamente na mesma frequência.",
-        "Brilhante! Acertou na veia. Vamos para o próximo nível."
-    ]
-    for idx, suc in enumerate(sucessos):
-        p = f"temp_files/sa_s_{idx}.mp3"
-        gen_audio_sync(suc, p, tts_config)
-        with open(p, "rb") as f: 
-            success_b64s.append("data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8'))
-
-    # 2. Gerar 10 feedbacks de erro LONGOS e IMERSIVOS (Ajustados ao pedido)
-    error_b64s = []
-    erros = [
-        "Ops, não é bem por aí. Pensa um pouquinho mais na explicação que eu dei.",
-        "Quase, mas a lógica falhou. Tente novamente.",
-        "Acho que você piscou na hora da explicação. Foca aqui e tenta de novo.",
-        "Escorregou feio nessa. Revisa o conceito mentalmente e refaça.",
-        "Negativo. Volta duas casas mentais e escolhe outra opção.",
-        "Essa não passou no teste. Pense um pouco mais antes de clicar.",
-        "Errooooou! Mas faz parte do aprendizado. Vai lá, tenta mais uma vez.",
-        "Longe disso. Calma, respira e tenta entender a pegadinha.",
-        "Incorreto. A memória te traiu dessa vez. Escolha de novo.",
-        "Não rolou. Ajusta o foco e tenta marcar outra alternativa."
-    ]
-    for idx, err in enumerate(erros):
-        p = f"temp_files/sa_e_{idx}.mp3"
-        gen_audio_sync(err, p, tts_config)
-        with open(p, "rb") as f: 
-            error_b64s.append("data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8'))
-
     end_p = f"temp_files/sa_final_end.mp3"
     gen_audio_sync("Parabéns guerreiro! Você concluiu a masterclass com excelência. O diploma é seu.", end_p, tts_config)
     with open(end_p, "rb") as f: 
@@ -673,18 +635,34 @@ def render_super_aula_html(course_data, tts_config, brand_config):
 
         elif block["type"] == "quiz":
             qs = []
-            for q in block["questions"]:
+            for q_idx, q in enumerate(block["questions"]):
+                # Agora o Feedback de Sucesso é específico com a explicação
+                exp_text = q.get("explanation", "Essa é a lógica correta.")
+                
+                suc_text = f"Exato! {exp_text}"
+                p_suc = f"temp_files/sa_q_{idx}_{q_idx}_s.mp3"
+                gen_audio_sync(suc_text, p_suc, tts_config)
+                with open(p_suc, "rb") as f:
+                    suc_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+
+                # E o Feedback de Erro ensina o porquê de estar errado
+                err_text = f"Ops, não é bem por aí. Lembre-se: {exp_text}"
+                p_err = f"temp_files/sa_q_{idx}_{q_idx}_e.mp3"
+                gen_audio_sync(err_text, p_err, tts_config)
+                with open(p_err, "rb") as f:
+                    err_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+
                 qs.append({
                     "question": q["question"], 
                     "options": q["options"], 
-                    "answer_idx": q["options"].index(q["answer"])
+                    "answer_idx": q["options"].index(q["answer"]),
+                    "audio_success": suc_b64,
+                    "audio_error": err_b64
                 })
                 
             js_course_data.append({
                 "type": "quiz", 
-                "questions": qs, 
-                "audio_successes": success_b64s, 
-                "audio_errors": error_b64s
+                "questions": qs
             })
         
         elif block["type"] == "game":
@@ -1011,7 +989,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                         if(i === q.answer_idx) {{
                             btn.classList.add('btn-pulse'); 
                             ind.innerText = "✅";
-                            playAudioFadeIn(step.audio_successes[Math.floor(Math.random()*10)]); 
+                            playAudioFadeIn(q.audio_success); 
                             aud.onended = () => {{ 
                                 aud.onended = null; 
                                 btn.classList.remove('btn-pulse'); 
@@ -1024,7 +1002,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                         }} else {{
                             btn.classList.add('btn-shake'); 
                             ind.innerText = "❌";
-                            playAudioFadeIn(step.audio_errors[Math.floor(Math.random()*10)]); 
+                            playAudioFadeIn(q.audio_error); 
                             aud.onended = () => {{ 
                                 aud.onended = null; 
                                 document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = false); 
@@ -1139,7 +1117,7 @@ with tab1:
 
 with tab2:
     st.title("🎓 Super Aula: PET NR-33 (A Experiência Completa)")
-    # ROTEIRO COMPLEXO NR-33 TOTALMENTE EXPANDIDO
+    # ROTEIRO COMPLEXO NR-33 COM EXPLICAÇÕES NO QUIZ
     SUPER_AULA = [
         # FASE 1: O QUE É A PET (5 Slides)
         {
@@ -1198,7 +1176,7 @@ with tab2:
             ]
         },
         
-        # QUIZ 1: FUNDAMENTOS
+        # QUIZ 1: FUNDAMENTOS COM EXPLICAÇÕES
         {
             "type": "quiz",
             "questions": [
@@ -1209,7 +1187,8 @@ with tab2:
                         "Não, ela é válida apenas para cada entrada e deve ser encerrada ao final do turno.", 
                         "Sim, ela vale por até 30 dias após a assinatura."
                     ],
-                    "answer": "Não, ela é válida apenas para cada entrada e deve ser encerrada ao final do turno."
+                    "answer": "Não, ela é válida apenas para cada entrada e deve ser encerrada ao final do turno.",
+                    "explanation": "A validade da PET é estritamente atrelada ao turno de trabalho, para garantir que as condições seguras não tenham mudado de uma hora pra outra."
                 },
                 {
                     "question": "O que acontece se houver uma interrupção nas condições de trabalho ou saída dos trabalhadores?",
@@ -1218,7 +1197,8 @@ with tab2:
                         "A PET deve ser cancelada e uma nova permissão deve ser emitida para o retorno.",
                         "Basta o vigia dar um 'visto' no verso do documento atual."
                     ],
-                    "answer": "A PET deve ser cancelada e uma nova permissão deve ser emitida para o retorno."
+                    "answer": "A PET deve ser cancelada e uma nova permissão deve ser emitida para o retorno.",
+                    "explanation": "Qualquer saída da equipe exige que o ambiente seja testado e liberado do zero, gerando sempre um novo documento oficial."
                 }
             ]
         },
@@ -1313,7 +1293,7 @@ with tab2:
             ]
         },
         
-        # QUIZ 2: OPERACIONAL
+        # QUIZ 2: OPERACIONAL COM EXPLICAÇÕES
         {
             "type": "quiz",
             "questions": [
@@ -1324,7 +1304,8 @@ with tab2:
                         "Manter contagem contínua dos trabalhadores e acionar o resgate se necessário.", 
                         "Operar máquinas pesadas fora do espaço confinado."
                     ],
-                    "answer": "Manter contagem contínua dos trabalhadores e acionar o resgate se necessário."
+                    "answer": "Manter contagem contínua dos trabalhadores e acionar o resgate se necessário.",
+                    "explanation": "O vigia é o anjo da guarda que fica na parte de fora. Ele nunca pode abandonar o posto ou assumir outras tarefas operacionais que tirem a atenção dele."
                 },
                 {
                     "question": "Por quanto tempo a empresa deve manter arquivada a PET após o encerramento do trabalho?",
@@ -1333,7 +1314,8 @@ with tab2:
                         "1 ano.",
                         "5 anos."
                     ],
-                    "answer": "5 anos."
+                    "answer": "5 anos.",
+                    "explanation": "A norma exige a guarda física ou digital da permissão por exatos cinco anos para garantir total rastreabilidade e amparo legal da sua operação."
                 }
             ]
         },
