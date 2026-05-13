@@ -401,8 +401,8 @@ def render_html_player(roteiro, tts_config, brand_config):
         <header class="fixed top-10 left-10 z-50 flex items-center gap-6">
             [[LOGO_HTML]]
             <div>
-                <div class="text-[10px] font-bold tracking-[0.5em] uppercase opacity-40">Pitch Deck Elite</div>
-                <div class="text-sm font-medium text-brand">Luminal AI Engine</div>
+                <div class="text-[10px] font-bold tracking-[0.5em] uppercase opacity-40">Apresentação do Saber</div>
+                <div class="text-sm font-medium text-brand">Saber_IA</div>
             </div>
         </header>
 
