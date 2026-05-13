@@ -393,16 +393,31 @@ def render_html_player(scenes, tts_config, brand_config):
             let currentSlide = -1;
             let animationFrameId;
 
+            // Fade Audio Control
+            function playWithFadeIn() {
+                audio.volume = 0;
+                audio.play();
+                let vol = 0;
+                let fade = setInterval(() => {
+                    if (vol < 0.6) { // Abaixando o volume maximo para 60%
+                        vol += 0.05;
+                        audio.volume = vol;
+                    } else {
+                        clearInterval(fade);
+                    }
+                }, 50);
+            }
+
             function startPresentation() {
                 document.getElementById('start-overlay').style.display = 'none';
-                audio.play();
+                playWithFadeIn();
                 update();
             }
             function replayPresentation() {
                 document.getElementById('replay-overlay').style.display = 'none';
                 audio.currentTime = 0;
                 currentSlide = -1;
-                audio.play();
+                playWithFadeIn();
                 update();
             }
             function update() {
@@ -480,7 +495,7 @@ def render_mp4_video(scenes, tts_config):
     st.video("temp_files/output.mp4")
 
 # ==========================================
-# MOTOR DA SUPER AULA (COMPILADOR HTML/JS)
+# MOTOR DA SUPER AULA (COMPILADOR HTML/JS TURBINADO)
 # ==========================================
 def render_super_aula_html(course_data, tts_config, brand_config):
     js_course_data = []
@@ -489,19 +504,41 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     st.write("⚙️ A pré-compilar Inteligência da Aula (Isso leva uns segundos)...")
     progress = st.progress(0)
     
-    # 1. Pré-gerar áudios padrão (Feedback)
     cleanup_temp()
     
-    success_path = "temp_files/sa_success.mp3"
-    gen_audio_sync("Exatamente! Você pegou a visão perfeitamente. Vamos avançar para o próximo nível.", success_path, tts_config)
-    with open(success_path, "rb") as f:
-        success_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
+    # 1. Pré-gerar 10 áudios de SUCESSO (Feedback)
+    success_b64s = []
+    sucessos = [
+        "Exatamente! Você pegou a visão perfeitamente.",
+        "Na mosca! É isso aí, gabaritou.",
+        "Perfeito! O seu cérebro já está fazendo as conexões certas.",
+        "Cirúrgico. Resposta corretíssima, vamos em frente.",
+        "Mandou muito bem! Assim que se faz.",
+        "Exato! Você não está de brincadeira hoje.",
+        "Aí sim! Resposta de quem prestou atenção em cada detalhe.",
+        "Sensacional. Gabarito puro, continue assim.",
+        "Certíssimo! Estamos na mesma frequência.",
+        "Brilhante! Acertou na veia. Vamos para o próximo nível."
+    ]
+    for idx, suc in enumerate(sucessos):
+        spath = f"temp_files/sa_suc_{idx}.mp3"
+        gen_audio_sync(suc, spath, tts_config)
+        with open(spath, "rb") as f:
+            success_b64s.append("data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8'))
 
+    # 2. Pré-gerar 10 áudios de ERRO (Feedback)
     error_b64s = []
     erros = [
         "Ops, não é bem por aí. Pensa um pouquinho mais na explicação que eu dei.",
         "Quase, mas a lógica falhou. Tente novamente.",
-        "Acho que você piscou na hora da explicação. Foca aqui e tenta de novo."
+        "Acho que você piscou na hora da explicação. Foca aqui e tenta de novo.",
+        "Escorregou feio nessa. Revisa o conceito mentalmente e refaça.",
+        "Negativo. Volta duas casas mentais e escolhe outra opção.",
+        "Essa não passou no teste. Pense um pouco mais.",
+        "Errooooou! Mas faz parte do aprendizado. Vai lá, mais uma vez.",
+        "Longe disso. Calma, respira e tenta entender a pegadinha.",
+        "Incorreto. A memória te traiu dessa vez. Escolha de novo.",
+        "Não rolou. Ajusta o foco e tenta outra alternativa."
     ]
     for idx, err in enumerate(erros):
         epath = f"temp_files/sa_err_{idx}.mp3"
@@ -514,7 +551,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
     with open(end_path, "rb") as f:
         end_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
 
-    # 2. Processar a Trilha da Aula
+    # 3. Processar a Trilha da Aula
     total_global_slides = 0
     total_steps = len(course_data)
     
@@ -554,18 +591,25 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             html_layers += f'<div id="layer_{step_idx}" class="video-layer" style="display:none; position:absolute; inset:0;">{slides_html}</div>'
 
         elif block["type"] == "quiz":
+            # Prepara as questoes do quiz
+            q_list = []
+            for q in block["questions"]:
+                q_list.append({
+                    "question": q["question"],
+                    "options": q["options"],
+                    "answer_idx": q["options"].index(q["answer"])
+                })
+
             js_course_data.append({
                 "type": "quiz",
-                "question": block["question"],
-                "options": block["options"],
-                "answer_idx": block["options"].index(block["answer"]),
-                "audio_success": success_b64,
+                "questions": q_list,
+                "audio_successes": success_b64s,
                 "audio_errors": error_b64s
             })
             
         progress.progress((step_idx + 1) / total_steps)
 
-    # 3. Montar o Super HTML Monolítico
+    # 4. Montar o Super HTML Monolítico com Animações Extra e Fade In/Out
     html_code = """
     <!DOCTYPE html>
     <html lang="pt-br">
@@ -588,6 +632,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
 
             .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 32px; padding: 3rem; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); transition: all 0.5s ease; }
             
+            /* Animações dos Componentes Base */
             .animate-up { transform: translateY(50px); opacity: 0; transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1); }
             .animate-in { transform: scale(0.9); opacity: 0; transition: all 1.2s cubic-bezier(0.22, 1, 0.36, 1); }
             .active .animate-up, .active .animate-in { transform: translateY(0) scale(1); opacity: 1; }
@@ -600,9 +645,29 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             .overlay-screen { position: fixed; inset: 0; z-index: 999; background: #020617; display: flex; align-items: center; justify-content: center; flex-direction: column;}
             .blur-bg { background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(20px); }
             
-            .quiz-btn { border: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
-            .quiz-btn:hover:not(:disabled) { border-color: var(--primary); background: rgba(255,255,255,0.1); }
+            /* Animações Juicy do Quiz */
+            @keyframes popIn {
+                0% { transform: scale(0.8) translateY(30px); opacity: 0; }
+                100% { transform: scale(1) translateY(0); opacity: 1; }
+            }
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                20%, 60% { transform: translateX(-10px); }
+                40%, 80% { transform: translateX(10px); }
+            }
+            @keyframes pulseGlow {
+                0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+                70% { box-shadow: 0 0 0 20px rgba(34, 197, 94, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+            }
+
+            .quiz-container-anim { animation: popIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+            .quiz-btn { border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transform: scale(1); transition: all 0.2s; }
+            .quiz-btn:hover:not(:disabled) { border-color: var(--primary); background: rgba(255,255,255,0.1); transform: scale(1.02); }
+            .quiz-btn:active:not(:disabled) { transform: scale(0.98); }
             .quiz-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+            .btn-shake { animation: shake 0.5s ease-in-out; border-color: #ef4444 !important; background: rgba(239, 68, 68, 0.2) !important;}
+            .btn-pulse { animation: pulseGlow 1s infinite; border-color: #22c55e !important; background: rgba(34, 197, 94, 0.2) !important;}
         </style>
     </head>
     <body>
@@ -623,9 +688,10 @@ def render_super_aula_html(course_data, tts_config, brand_config):
         </div>
 
         <div id="quiz-overlay" class="overlay-screen blur-bg" style="display: none;">
-            <div class="max-w-4xl w-full px-8">
-                <div class="inline-block px-4 py-1 rounded-full bg-brand/20 border border-brand/30 text-brand text-xs font-black tracking-widest uppercase mb-6">
-                    ⚡ DESAFIO DE CONHECIMENTO
+            <div id="quiz-content" class="max-w-4xl w-full px-8 quiz-container-anim">
+                <div class="inline-block px-4 py-1 rounded-full bg-brand/20 border border-brand/30 text-brand text-xs font-black tracking-widest uppercase mb-6 flex justify-between items-center w-full">
+                    <span>⚡ DESAFIO DE CONHECIMENTO</span>
+                    <span id="quiz-progress-text"></span>
                 </div>
                 <h2 id="quiz-question" class="text-4xl md:text-5xl font-black mb-10 leading-tight">Pergunta...</h2>
                 <div id="quiz-options" class="space-y-4"></div>
@@ -655,8 +721,40 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             const courseData = [[JS_COURSE_DATA]];
             const endAudioSrc = "[[END_AUDIO_B64]]";
             const audio = document.getElementById('main-audio');
+            
             let currentStep = 0;
+            let currentQuizSubStep = 0;
             let animationFrameId;
+
+            // Audio Controls (Fades e Volume 60%)
+            function playAudioFadeIn(src) {
+                audio.src = src;
+                audio.volume = 0;
+                audio.play();
+                let vol = 0;
+                let fade = setInterval(() => {
+                    if (vol < 0.6) {
+                        vol += 0.05;
+                        audio.volume = vol;
+                    } else {
+                        clearInterval(fade);
+                    }
+                }, 50);
+            }
+
+            function fadeOutAudio(callback) {
+                let vol = audio.volume;
+                let fade = setInterval(() => {
+                    if (vol > 0.05) {
+                        vol -= 0.05;
+                        audio.volume = vol;
+                    } else {
+                        clearInterval(fade);
+                        audio.pause();
+                        if(callback) callback();
+                    }
+                }, 50);
+            }
 
             function startCourse() {
                 document.getElementById('start-overlay').style.display = 'none';
@@ -670,28 +768,24 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             }
 
             function playStep() {
-                cancelAnimationFrame(animationFrameId); // Para qualquer vídeo rodando
+                cancelAnimationFrame(animationFrameId);
 
                 if(currentStep >= courseData.length) {
                     document.getElementById('end-overlay').style.display = 'flex';
-                    audio.src = endAudioSrc;
-                    audio.play();
+                    playAudioFadeIn(endAudioSrc);
                     return;
                 }
 
                 const step = courseData[currentStep];
 
                 if(step.type === 'video') {
-                    // Esconde Quiz e outras camadas
                     document.getElementById('quiz-overlay').style.display = 'none';
                     document.querySelectorAll('.video-layer').forEach(el => el.style.display = 'none');
 
-                    // Mostra o layer atual
                     const layer = document.getElementById(step.layer_id);
                     layer.style.display = 'block';
 
-                    audio.src = step.audio_src;
-                    audio.play();
+                    playAudioFadeIn(step.audio_src);
 
                     runVideoLogic(step, layer);
 
@@ -703,9 +797,10 @@ def render_super_aula_html(course_data, tts_config, brand_config):
 
                 } else if (step.type === 'quiz') {
                     document.getElementById('progress-fill').style.width = '100%';
-                    // Esconde os vídeos e mostra o quiz
                     document.querySelectorAll('.video-layer').forEach(el => el.style.display = 'none');
-                    showQuiz(step);
+                    
+                    currentQuizSubStep = 0;
+                    showQuizQuestion(step, currentQuizSubStep);
                 }
             }
 
@@ -739,50 +834,78 @@ def render_super_aula_html(course_data, tts_config, brand_config):
                 update();
             }
 
-            function showQuiz(step) {
+            function showQuizQuestion(step, qIndex) {
                 const quizContainer = document.getElementById('quiz-overlay');
+                const quizContent = document.getElementById('quiz-content');
+                
                 quizContainer.style.display = 'flex';
-                document.getElementById('quiz-question').innerText = step.question;
+                // Reseta a animação para ela tocar novamente
+                quizContent.style.animation = 'none';
+                void quizContent.offsetWidth; // trigger reflow
+                quizContent.style.animation = 'popIn 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+
+                const qData = step.questions[qIndex];
+                
+                // Texto de progresso (ex: Pergunta 1/3)
+                if(step.questions.length > 1) {
+                    document.getElementById('quiz-progress-text').innerText = `Pergunta ${qIndex + 1} de ${step.questions.length}`;
+                } else {
+                    document.getElementById('quiz-progress-text').innerText = "";
+                }
+
+                document.getElementById('quiz-question').innerText = qData.question;
 
                 const optsContainer = document.getElementById('quiz-options');
                 optsContainer.innerHTML = '';
 
-                step.options.forEach((opt, idx) => {
+                qData.options.forEach((opt, idx) => {
                     const btn = document.createElement('button');
-                    btn.className = "quiz-btn glass-card w-full text-left p-6 text-xl transition-all flex items-center justify-between";
+                    btn.className = "quiz-btn glass-card w-full text-left p-6 text-xl flex items-center justify-between";
                     btn.innerHTML = `<span>${opt}</span> <span class="indicator text-2xl"></span>`;
-                    btn.onclick = () => handleQuizAnswer(idx, step, btn);
+                    btn.onclick = () => handleQuizAnswer(idx, step, qIndex, btn);
                     optsContainer.appendChild(btn);
                 });
             }
 
-            function handleQuizAnswer(idx, step, btnElement) {
-                // Desativa botões
+            function handleQuizAnswer(idx, step, qIndex, btnElement) {
                 document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = true);
                 const indicator = btnElement.querySelector('.indicator');
+                const qData = step.questions[qIndex];
 
-                if(idx === step.answer_idx) {
-                    btnElement.classList.add('bg-green-500/20', 'border-green-400');
+                if(idx === qData.answer_idx) {
+                    btnElement.classList.add('btn-pulse');
                     indicator.innerText = "✅";
-                    audio.src = step.audio_success;
-                    audio.play();
+                    
+                    // Puxa um áudio de sucesso aleatório
+                    const randomSuc = step.audio_successes[Math.floor(Math.random() * step.audio_successes.length)];
+                    playAudioFadeIn(randomSuc);
+                    
                     audio.onended = () => {
                         audio.onended = null;
-                        currentStep++;
-                        playStep();
+                        btnElement.classList.remove('btn-pulse');
+                        
+                        if (qIndex + 1 < step.questions.length) {
+                            // Próxima pergunta do mesmo quiz
+                            currentQuizSubStep++;
+                            showQuizQuestion(step, currentQuizSubStep);
+                        } else {
+                            // Avança para o próximo bloco (vídeo)
+                            currentStep++;
+                            playStep();
+                        }
                     };
                 } else {
-                    btnElement.classList.add('bg-red-500/20', 'border-red-400');
+                    btnElement.classList.add('btn-shake');
                     indicator.innerText = "❌";
+                    
                     // Toca erro aleatório
                     const randomErr = step.audio_errors[Math.floor(Math.random() * step.audio_errors.length)];
-                    audio.src = randomErr;
-                    audio.play();
+                    playAudioFadeIn(randomErr);
+                    
                     audio.onended = () => {
                         audio.onended = null;
-                        // Restaura botões
                         document.querySelectorAll('.quiz-btn').forEach(b => b.disabled = false);
-                        btnElement.classList.remove('bg-red-500/20', 'border-red-400');
+                        btnElement.classList.remove('btn-shake');
                         indicator.innerText = "";
                     };
                 }
@@ -896,10 +1019,9 @@ with tab2:
     st.title("🎓 Super Aula: Redes Neurais")
     st.markdown("Uma experiência interativa com vídeo, voz e testes de conhecimento 100% contínua.")
     
+    # O JSON DA SUPER AULA AGORA SUPORTA MÚLTIPLAS PERGUNTAS POR QUIZ
     SUPER_AULA = [
-        # ==========================================
         # FASE 1: VÍDEO INTRODUTÓRIO (5 Slides)
-        # ==========================================
         {
             "type": "video",
             "scenes": [
@@ -945,23 +1067,32 @@ with tab2:
             ]
         },
         
-        # ==========================================
-        # QUIZ 1
-        # ==========================================
+        # QUIZ 1: COM DUAS PERGUNTAS AGORA
         {
             "type": "quiz",
-            "question": "Com base na explicação, qual é a principal diferença entre a Programação Clássica e o Machine Learning?",
-            "options": [
-                "O Machine Learning não usa computadores.", 
-                "Na programação clássica humanos escrevem as regras; no ML, a máquina descobre as regras a partir dos dados.", 
-                "A programação clássica é mais rápida e inteligente."
-            ],
-            "answer": "Na programação clássica humanos escrevem as regras; no ML, a máquina descobre as regras a partir dos dados."
+            "questions": [
+                {
+                    "question": "Com base na explicação, qual é a principal diferença entre a Programação Clássica e o Machine Learning?",
+                    "options": [
+                        "O Machine Learning não usa computadores.", 
+                        "Na programação clássica humanos escrevem as regras; no ML, a máquina descobre as regras a partir dos dados.", 
+                        "A programação clássica é mais rápida e inteligente."
+                    ],
+                    "answer": "Na programação clássica humanos escrevem as regras; no ML, a máquina descobre as regras a partir dos dados."
+                },
+                {
+                    "question": "O que o 'Perceptron' (o neurônio digital) faz com a informação bruta que recebe?",
+                    "options": [
+                        "Deleta a informação para economizar espaço.",
+                        "Aplica um peso matemático para decidir se o sinal deve seguir adiante.",
+                        "Transforma texto em imagens de alta resolução."
+                    ],
+                    "answer": "Aplica um peso matemático para decidir se o sinal deve seguir adiante."
+                }
+            ]
         },
         
-        # ==========================================
-        # FASE 2: O CORE TÉCNICO (Exatos 8 Slides)
-        # ==========================================
+        # FASE 2: O CORE TÉCNICO
         {
             "type": "video",
             "scenes": [
@@ -1041,23 +1172,23 @@ with tab2:
             ]
         },
         
-        # ==========================================
         # QUIZ 2
-        # ==========================================
         {
             "type": "quiz",
-            "question": "Qual é a estrutura responsável por extrair e processar os padrões profundos de uma Rede Neural?",
-            "options": [
-                "A fonte de alimentação (GPU).", 
-                "A Camada Oculta (Hidden Layers).", 
-                "O código fonte do sistema operacional."
-            ],
-            "answer": "A Camada Oculta (Hidden Layers)."
+            "questions": [
+                {
+                    "question": "Qual é a estrutura responsável por extrair e processar os padrões profundos de uma Rede Neural?",
+                    "options": [
+                        "A fonte de alimentação (GPU).", 
+                        "A Camada Oculta (Hidden Layers).", 
+                        "O código fonte do sistema operacional."
+                    ],
+                    "answer": "A Camada Oculta (Hidden Layers)."
+                }
+            ]
         },
 
-        # ==========================================
         # FASE 3: FECHAMENTO (3 Slides)
-        # ==========================================
         {
             "type": "video",
             "scenes": [
@@ -1089,7 +1220,8 @@ with tab2:
             ]
         }
     ]
-    st.info("💡 A aula foi pré-configurada. Clique abaixo para compilar a experiência (Pode levar de 15 a 30 segundos).")
+
+    st.info("💡 A aula foi pré-configurada. Clique abaixo para compilar a experiência (A geração dos áudios pode levar uns 30 segundos).")
     
     if st.button("🔥 Compilar e Iniciar Super Aula Interativa", type="primary", use_container_width=True):
         render_super_aula_html(SUPER_AULA, tts_conf, brand_config)
