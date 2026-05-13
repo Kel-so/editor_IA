@@ -24,7 +24,7 @@ def cleanup_temp():
     os.makedirs("temp_files", exist_ok=True)
 
 # ==========================================
-# INTEGRAÇÃO GEMINI 3.1 FLASH LITE (Cérebro)
+# INTEGRAÇÃO GEMINI (Cérebro)
 # ==========================================
 def generate_script_with_gemini(tema_texto):
     api_key = st.secrets.get("GEMINI_API_KEY", "")
@@ -61,7 +61,7 @@ def generate_script_with_gemini(tema_texto):
     Responda APENAS o JSON puro.
     """
     try:
-        model = genai.GenerativeModel("gemini-3.1-flash-lite-preview")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         response = model.generate_content(
             prompt, 
             generation_config=genai.GenerationConfig(response_mime_type="application/json")
@@ -78,8 +78,7 @@ def gen_audio_sync(text, filepath, tts_config):
     provider = tts_config.get("provider", "Edge-TTS")
     
     # TRATAMENTO DO BUG DE CORTE E SOM ESTRANHO:
-    # Removemos o " . . ." que confundia a IA.
-    # Garantimos que a frase termine com pontuação para a voz baixar naturalmente.
+    # A IA não pode terminar a frase sem pontuação. Se faltar, injetamos um ponto.
     clean_text = text.strip()
     if clean_text and clean_text[-1] not in ['.', '!', '?']:
         clean_text += "."
@@ -88,12 +87,12 @@ def gen_audio_sync(text, filepath, tts_config):
         try:
             from elevenlabs.client import ElevenLabs
             api_key = st.secrets.get("ELEVENLABS_API_KEY", "")
-            voice_id = tts_config.get("voice_id", "kd1lRcSdRGIfyKxQKjmH")
+            voice_id = tts_config.get("voice_id", "JBFqnCBsd6RMkjVDRZzb")
             client = ElevenLabs(api_key=api_key)
             audio_generator = client.text_to_speech.convert(
                 text=clean_text, 
                 voice_id=voice_id, 
-                model_id="eleven_multilingual_v2", 
+                model_id="eleven_turbo_v2_5", 
                 output_format="mp3_44100_128"
             )
             with open(filepath, "wb") as f:
@@ -328,23 +327,36 @@ def build_luminal_slide(slide_data, total_index):
 # MOTOR DO EDITOR CLÁSSICO HTML (Aba 1)
 # ==========================================
 def render_html_player(scenes, tts_config, brand_config):
-    audio_srcs = []
+    audio_clips = []
     slides_html = ""
+    durations = []
     progress = st.progress(0)
     
-    # NOVA LÓGICA: Não usamos mais o MoviePy para a Web. 
-    # O HTML vai tocar os áudios um por um nativamente. Zero cortes.
-    st.write("🎙️ Gerando Áudios...")
+    # Criador de silencio fisico (1 segundo) para evitar cortes
+    silence_array = np.zeros((44100, 2))
+    silence_clip = AudioArrayClip(silence_array, fps=44100)
+    
     for i, scene in enumerate(scenes):
+        st.write(f"🎙️ Processando Cena {i+1}/{len(scenes)}...")
         path = f"temp_files/audio_{i}.mp3"
         gen_audio_sync(scene.get("narration_text", "Texto não encontrado"), path, tts_config)
         
-        with open(path, "rb") as f:
-            audio_b64 = "data:audio/mp3;base64," + base64.b64encode(f.read()).decode('utf-8')
-            audio_srcs.append(audio_b64)
-            
+        clip = AudioFileClip(path)
+        audio_clips.append(clip)
+        audio_clips.append(silence_clip) # Injeta 1s de silêncio obrigatório
+        
         slides_html += build_luminal_slide(scene, i)
+        # O slide dura o tempo do áudio + 1s do silêncio
+        durations.append(int(clip.duration * 1000) + 1000) 
+            
         progress.progress((i+1)/len(scenes))
+
+    st.write("🎬 Compilando Apresentação...")
+    final_audio = concatenate_audioclips(audio_clips)
+    final_audio.write_audiofile("temp_files/final_classic.mp3", logger=None)
+    
+    with open("temp_files/final_classic.mp3", "rb") as f:
+        audio_b64 = base64.b64encode(f.read()).decode('utf-8')
 
     html_code = f"""
     <!DOCTYPE html>
@@ -483,20 +495,20 @@ def render_html_player(scenes, tts_config, brand_config):
             </div>
         </header>
         
-        <audio id="audio"></audio>
+        <audio id="audio" src="data:audio/mp3;base64,{audio_b64}"></audio>
         
         <main class="relative h-screen w-full overflow-hidden">
             {slides_html}
         </main>
         
         <script>
-            const audioSrcs = {json.dumps(audio_srcs)};
             const audio = document.getElementById('audio');
             const slides = document.querySelectorAll('.slide');
-            let currentSlide = 0;
+            const durations = {json.dumps(durations)};
+            let currentSlide = -1;
+            let animationFrameId;
 
-            function playAudioFadeIn(src) {{
-                audio.src = src;
+            function playWithFadeIn() {{
                 audio.volume = 0; 
                 audio.play();
                 let vol = 0;
@@ -510,38 +522,51 @@ def render_html_player(scenes, tts_config, brand_config):
                 }}, 50);
             }}
 
-            function playScene() {{
-                if(currentSlide >= audioSrcs.length) {{
-                    document.getElementById('replay-overlay').style.display = 'flex';
-                    return;
-                }}
-                
-                // Muda o slide
-                slides.forEach(s => s.classList.remove('active'));
-                if(slides[currentSlide]) slides[currentSlide].classList.add('active');
-                
-                // Atualiza Barra de Progresso
-                document.getElementById('progress-fill').style.width = ((currentSlide / audioSrcs.length) * 100) + '%';
-
-                // Toca o áudio e espera ele fisicamente acabar
-                playAudioFadeIn(audioSrcs[currentSlide]);
-                
-                audio.onended = () => {{
-                    currentSlide++;
-                    setTimeout(playScene, 1000); // Exato 1 SEGUNDO DE RESPIRO
-                }};
-            }}
-
             function startPresentation() {{ 
                 document.getElementById('start-overlay').style.display = 'none'; 
-                currentSlide = 0;
-                playScene(); 
+                playWithFadeIn(); 
+                update(); 
             }}
             
             function replayPresentation() {{ 
                 document.getElementById('replay-overlay').style.display = 'none'; 
-                currentSlide = 0;
-                playScene(); 
+                audio.currentTime = 0; 
+                currentSlide = -1; 
+                playWithFadeIn(); 
+                update(); 
+            }}
+            
+            function update() {{
+                const now = audio.currentTime * 1000;
+                let acc = 0; 
+                let target = 0;
+                let globalDuration = durations.reduce((a,b)=>a+b,0);
+                
+                document.getElementById('progress-fill').style.width = `${{(now / globalDuration) * 100}}%`;
+                
+                for(let i=0; i<durations.length; i++) {{
+                    if (now >= acc && now < acc + durations[i]) {{ 
+                        target = i; 
+                        break; 
+                    }}
+                    acc += durations[i];
+                }}
+                
+                if (target !== currentSlide) {{
+                    if(currentSlide >= 0 && slides[currentSlide]) {{ 
+                        slides[currentSlide].classList.remove('active'); 
+                    }}
+                    currentSlide = target;
+                    if(slides[currentSlide]) {{ 
+                        slides[currentSlide].classList.add('active'); 
+                    }}
+                }}
+                
+                if (audio.ended) {{
+                    document.getElementById('replay-overlay').style.display = 'flex';
+                }} else {{
+                    animationFrameId = requestAnimationFrame(update);
+                }}
             }}
         </script>
     </body>
@@ -851,6 +876,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             const endAudio = "{end_b64}";
             const aud = document.getElementById('aud'); 
             let current = 0; 
+            let animId;
 
             // Fades de áudio com limite de volume em 60%
             function playAudioFadeIn(src) {{
@@ -885,6 +911,7 @@ def render_super_aula_html(course_data, tts_config, brand_config):
             }}
 
             function playStep() {{
+                cancelAnimationFrame(animId);
                 document.getElementById('quiz-overlay').style.display = 'none';
                 document.getElementById('game-overlay').style.display = 'none';
                 document.querySelectorAll('.video-layer').forEach(l => l.style.display = 'none');
@@ -1078,30 +1105,62 @@ with tab1:
     if 'scenes' not in st.session_state: 
         st.session_state['scenes'] = []
         
-    tema = st.text_input("Tema:")
-    if st.button("🧠 Gerar Roteiro"):
-        res = generate_script_with_gemini(tema)
-        if res: 
-            st.session_state['scenes'] = res['scenes']
+    tema = st.text_input("O que vamos ensinar hoje?", placeholder="Ex: Mercado de Ações...")
+    
+    if st.button("🧠 1. Gerar Roteiro Mágico", use_container_width=True):
+        with st.spinner("IA fritando os neurônios para criar a aula..."):
+            res = generate_script_with_gemini(tema)
+            if res and 'scenes' in res: 
+                st.session_state['scenes'] = res['scenes']
+                # Streamlit fará o rerender natural do fluxo abaixo
     
     if st.session_state['scenes']:
-        for i, sc in enumerate(st.session_state['scenes']):
-            with st.expander(f"Cena {i+1} ({sc.get('layout', 'Slide').upper()})"):
+        st.markdown("### 📝 Linha do Tempo e Conteúdo")
+        
+        new_scenes = []
+        layouts_list = [
+            "hero", "pillars", "philosophy", "side_by_side", "metrics", 
+            "team", "timeline", "features_grid", "quote", "compare", 
+            "title_only", "ending"
+        ]
+        
+        # RESTAURAÇÃO: Loop seguro e cravado como nas versões estáveis antigas
+        for i, scene in enumerate(st.session_state['scenes']):
+            with st.expander(f"Cena {i+1} ({scene.get('layout', 'Slide').upper()})", expanded=False):
                 col1, col2 = st.columns([2, 1])
                 with col1:
-                    sc['narration_text'] = st.text_area(f"Fala", sc['narration_text'], key=f"n{i}")
-                    sc['title'] = st.text_input(f"Título", sc.get('title',''), key=f"t{i}")
-                    sc['highlight'] = st.text_input(f"Destaque Neon", sc.get('highlight',''), key=f"h{i}")
+                    narration = st.text_area(f"Fala", value=scene.get('narration_text', ''), key=f"n{i}")
+                    title = st.text_input(f"Título", value=scene.get('title',''), key=f"t{i}")
+                    highlight = st.text_input(f"Destaque Neon", value=scene.get('highlight',''), key=f"h{i}")
                 with col2:
-                    sc['layout'] = st.selectbox(
-                        "Layout", 
-                        ["hero","pillars","philosophy","side_by_side","metrics","team","timeline","features_grid","quote","compare","title_only","ending"], 
-                        key=f"l{i}", 
-                        index=0
-                    )
-                    sc['image_url'] = st.text_input("Imagem URL", sc.get('image_url',''), key=f"img{i}")
+                    current_layout = scene.get('layout', 'hero')
+                    idx_layout = layouts_list.index(current_layout) if current_layout in layouts_list else 0
+                    
+                    layout = st.selectbox("Layout", layouts_list, index=idx_layout, key=f"l{i}")
+                    img = st.text_input("Imagem URL", value=scene.get('image_url',''), key=f"img{i}")
+                
+                # Salvando na nova lista
+                scene['narration_text'] = narration
+                scene['title'] = title
+                scene['highlight'] = highlight
+                scene['layout'] = layout
+                scene['image_url'] = img
+                new_scenes.append(scene)
         
-        if st.button("🚀 Renderizar Editor"):
+        # Atualiza a memória de forma segura
+        st.session_state['scenes'] = new_scenes
+
+        # RESTAURAÇÃO: O Botão de adicionar cenas voltou!
+        if st.button("➕ Adicionar Nova Cena", use_container_width=True):
+            st.session_state['scenes'].append({
+                "layout": "title_only", 
+                "narration_text": "Nova fala aqui.", 
+                "title": "Novo Slide"
+            })
+            st.rerun()
+
+        st.divider()
+        if st.button("🚀 2. Renderizar Projeto Clássico", type="primary", use_container_width=True):
             cleanup_temp()
             if "1️⃣" in modo:
                 render_html_player(st.session_state['scenes'], tc, bc)
